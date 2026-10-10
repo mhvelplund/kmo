@@ -1,0 +1,16 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: kmo
+servers: 1
+agents: 1
+image: rancher/k3s:v1.37.1-k3s1
+registries:
+  create:
+    name: kmo-registry.localhost
+    host: 0.0.0.0
+    hostPort: "5111"
+ports:
+  - port: 9000:30900
+    nodeFilters:
+      - server:0

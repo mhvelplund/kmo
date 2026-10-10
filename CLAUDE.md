@@ -74,12 +74,16 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 - `mise run setup` installs the npm dependencies and the Git hooks.
 - `mise run lint` runs ESLint, the Prettier check and markdownlint.
 - `npm run format` rewrites files with Prettier (line length 120). Run it before committing.
+- `mise run cluster:up` and `mise run cluster:down` create and delete the local k3d cluster. Its kubeconfig is
+  `.kube/config` inside the repository.
+- `mise run deploy` installs Argo Rollouts, RustFS, the seed Job and the sample workloads from `dev/`.
+- `mise run store -- <aws args>` runs the AWS CLI against the local RustFS, for example `mise run store -- s3 ls`.
 
 Pre-commit also runs gitleaks and a TypeScript type check. Commit directly to `main`; do not create branches. Use
 conventional commit messages with the types `feat`, `fix` and `chore`, for example `feat: add the env file parser`.
 
-The remaining planned tasks (`cluster:up`, `cluster:down`, `deploy`, `test`, `test:e2e`, `demo`) do not exist yet. The
-local environment will be a k3d cluster with RustFS as the object store and Argo Rollouts installed.
+The remaining planned tasks (`test`, `test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster with
+RustFS as the object store and Argo Rollouts installed.
 
 ## How the build proceeds
 

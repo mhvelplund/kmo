@@ -15,3 +15,33 @@ run = ["npm install", "pre-commit install"]
 [tasks.lint]
 description = "Run every static check"
 run = ["npm run lint", "npm run format:check", "npm run lint:md"]
+
+[tasks."cluster:up"]
+description = "Create the local k3d cluster and its image registry"
+run = ["mkdir -p .kube", "k3d cluster create --config dev/k3d.yaml --wait"]
+
+[tasks."cluster:down"]
+description = "Delete the local k3d cluster and its image registry"
+run = "k3d cluster delete --config dev/k3d.yaml"
+
+[tasks.deploy]
+description = "Install the local environment into the cluster"
+run = [
+  "kubectl apply --server-side -k dev/argo-rollouts",
+  "kubectl wait --for=condition=Established crd/rollouts.argoproj.io --timeout=60s",
+  "kubectl delete job store-seed -n kmo-dev --ignore-not-found",
+  "kubectl apply -k dev",
+  "kubectl rollout status deployment/rustfs -n kmo-dev --timeout=180s",
+  "kubectl wait --for=condition=Complete job/store-seed -n kmo-dev --timeout=180s",
+  "kubectl rollout status deployment/orders-api -n shop --timeout=120s",
+]
+
+[tasks.store]
+description = "Run an AWS CLI command against the local object store, e.g. mise run store -- s3 ls"
+run = "aws"
+
+[tasks.store.env]
+AWS_CONFIG_FILE = "{{config_root}}/dev/aws-config"
+AWS_PROFILE = "default"
+AWS_ACCESS_KEY_ID = "kmoadmin"
+AWS_SECRET_ACCESS_KEY = "kmo-local-secret"

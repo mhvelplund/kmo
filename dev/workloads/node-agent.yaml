@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-agent
+  namespace: shop
+spec:
+  selector:
+    matchLabels:
+      app: node-agent
+  template:
+    metadata:
+      labels:
+        app: node-agent
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: app
+          image: busybox:1.37.0
+          command: ["sh", "-c"]
+          args:
+            - |
+              env | grep -E '^(GREETING|LOG_LEVEL|REGION|DB_PASSWORD|SHARED_API_TOKEN)=' | sort
+              while true; do sleep 3600; done
+          envFrom:
+            - configMapRef:
+                name: node-agent-kmo
+            - secretRef:
+                name: node-agent-kmo

@@ -104,8 +104,6 @@ packages/core/test/*.test.ts   one test file per module
 packages/core/test/fixtures/   event payloads
 ```
 
-
-
 ### Task 1: Tooling
 
 **Before (explain to the user):** Mise pins every command-line tool per repository, so a fresh clone gets the same
@@ -397,8 +395,6 @@ git commit -m "Add tooling: Mise, npm workspace, linters and pre-commit hooks"
 - [x] **After (show, then pause):** Add a line with trailing spaces to `README.md`, run `git commit -am test`, and show
   the hook refusing it. Undo with `git checkout README.md`. Ask for questions before Task 2.
 
-
-
 ### Task 2: Local cluster and object store
 
 **Before (explain to the user):** k3d runs k3s, a small Kubernetes, inside Docker containers, so the whole cluster can
@@ -419,7 +415,7 @@ the part of S3.
   `kmo-dev/rustfs-root` (keys `accessKey`, `secretKey`); region `us-east-1`; buckets `kmo-config` and `kmo-tenant`, both
   versioned; Mise tasks `cluster:up`, `cluster:down`, `deploy`, `store`.
 
-- [ ] **Step 1: Write `dev/k3d.yaml`**
+- [x] **Step 1: Write `dev/k3d.yaml`**
 
 ```yaml
 apiVersion: k3d.io/v1alpha5
@@ -442,7 +438,7 @@ ports:
 
 One server and one agent give two nodes, which makes the DaemonSet in Task 3 worth looking at.
 
-- [ ] **Step 2: Write the sample env files**
+- [x] **Step 2: Write the sample env files**
 
 Run:
 
@@ -461,7 +457,7 @@ printf 'LOG_LEVEL=debug\n' >> dev/store-files/shop/orders-api/config.env
 The folder mirrors the bucket: `<namespace>/<name>/config.env` and `_common/config.env`. `orders-api` overrides the
 common `LOG_LEVEL`.
 
-- [ ] **Step 3: Write `dev/store/namespace.yaml`**
+- [x] **Step 3: Write `dev/store/namespace.yaml`**
 
 ```yaml
 apiVersion: v1
@@ -470,7 +466,7 @@ metadata:
   name: kmo-dev
 ```
 
-- [ ] **Step 4: Write `dev/store/rustfs.yaml`**
+- [x] **Step 4: Write `dev/store/rustfs.yaml`**
 
 ```yaml
 apiVersion: v1
@@ -544,7 +540,7 @@ spec:
 
 The data lives in an `emptyDir`, so it is lost when the pod restarts. The seed Job puts it back.
 
-- [ ] **Step 5: Write `dev/store/seed-job.yaml`**
+- [x] **Step 5: Write `dev/store/seed-job.yaml`**
 
 ```yaml
 apiVersion: batch/v1
@@ -601,7 +597,7 @@ spec:
 ConfigMap keys cannot contain a slash, so each file is stored with `__` in its name and the script turns that back into
 `/`.
 
-- [ ] **Step 6: Write `dev/kustomization.yaml`**
+- [x] **Step 6: Write `dev/kustomization.yaml`**
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -630,7 +626,7 @@ configMapGenerator:
       - shop__checkout__secrets.env=store-files/shop/checkout/secrets.env
 ```
 
-- [ ] **Step 7: Write `dev/aws-config`**
+- [x] **Step 7: Write `dev/aws-config`**
 
 ```ini
 [default]
@@ -640,7 +636,7 @@ s3 =
     addressing_style = path
 ```
 
-- [ ] **Step 8: Add the cluster tasks to `mise.toml`**
+- [x] **Step 8: Add the cluster tasks to `mise.toml`**
 
 Append:
 
@@ -675,7 +671,7 @@ AWS_SECRET_ACCESS_KEY = "kmo-local-secret"
 
 A finished Job cannot be changed, so `deploy` deletes the old one before applying.
 
-- [ ] **Step 9: Create the cluster**
+- [x] **Step 9: Create the cluster**
 
 Run: `mise run cluster:up && kubectl get nodes && curl -s http://localhost:5111/v2/_catalog` Expected: two nodes,
 `k3d-kmo-server-0` and `k3d-kmo-agent-0`, both `Ready`; then `{"repositories":[]}`.
@@ -683,7 +679,7 @@ Run: `mise run cluster:up && kubectl get nodes && curl -s http://localhost:5111/
 If port 9000 or 5111 is already taken on the host, k3d says so. Change the host side of the port in `dev/k3d.yaml` (and
 `endpoint_url` in `dev/aws-config` for 9000) and tell the user.
 
-- [ ] **Step 10: Deploy and verify**
+- [x] **Step 10: Deploy and verify**
 
 Run: `mise run deploy && mise run store -- s3 ls s3://kmo-config --recursive` Expected:
 `job.batch/store-seed condition met`, then twelve keys, among them `_common/config.env` and
@@ -694,7 +690,7 @@ Run: `mise run store -- s3api get-bucket-versioning --bucket kmo-config` Expecte
 If `put-bucket-versioning` fails inside the Job (`kubectl logs job/store-seed -n kmo-dev`), that is an early answer to
 the first spike check. Stop and tell the user; the spec's fallback is another store.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 npm run format
@@ -702,10 +698,8 @@ git add -A
 git commit -m "chore: add local cluster with RustFS and seeded sample files"
 ```
 
-- [ ] **After (show, then pause):** Show `kubectl get all -n kmo-dev`, the Job's log, and
+- [x] **After (show, then pause):** Show `kubectl get all -n kmo-dev`, the Job's log, and
   `mise run store -- s3 cp s3://kmo-config/shop/orders-api/config.env -`. Ask for questions before Task 3.
-
-
 
 ### Task 3: Sample workloads with hand-written config
 
@@ -729,7 +723,7 @@ values. This task ends by showing the problem KMO exists to solve.
   `nightly-report` and Rollout `checkout`. Each references ConfigMap and Secret `<name>-kmo`, the names KMO will later
   write by default. Every pod has the label `app: <name>`.
 
-- [ ] **Step 1: Write the Argo Rollouts install**
+- [x] **Step 1: Write the Argo Rollouts install**
 
 `dev/argo-rollouts/namespace.yaml`:
 
@@ -751,7 +745,7 @@ resources:
   - https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/install.yaml
 ```
 
-- [ ] **Step 2: Write `dev/workloads/namespace.yaml`**
+- [x] **Step 2: Write `dev/workloads/namespace.yaml`**
 
 ```yaml
 apiVersion: v1
@@ -760,7 +754,7 @@ metadata:
   name: shop
 ```
 
-- [ ] **Step 3: Write `dev/workloads/orders-api.yaml`**
+- [x] **Step 3: Write `dev/workloads/orders-api.yaml`**
 
 ```yaml
 apiVersion: apps/v1
@@ -797,7 +791,7 @@ spec:
 The container prints the values it received and then idles. Printing a secret is acceptable only because these are
 sample values.
 
-- [ ] **Step 4: Write `dev/workloads/inventory.yaml`**
+- [x] **Step 4: Write `dev/workloads/inventory.yaml`**
 
 ```yaml
 apiVersion: v1
@@ -842,7 +836,7 @@ spec:
                 name: inventory-kmo
 ```
 
-- [ ] **Step 5: Write `dev/workloads/node-agent.yaml`**
+- [x] **Step 5: Write `dev/workloads/node-agent.yaml`**
 
 ```yaml
 apiVersion: apps/v1
@@ -875,7 +869,7 @@ spec:
                 name: node-agent-kmo
 ```
 
-- [ ] **Step 6: Write `dev/workloads/nightly-report.yaml`**
+- [x] **Step 6: Write `dev/workloads/nightly-report.yaml`**
 
 ```yaml
 apiVersion: batch/v1
@@ -910,7 +904,7 @@ spec:
 
 It runs every two minutes, despite the name, so there is something to watch.
 
-- [ ] **Step 7: Write `dev/workloads/checkout.yaml`**
+- [x] **Step 7: Write `dev/workloads/checkout.yaml`**
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -946,7 +940,7 @@ spec:
                 name: checkout-kmo
 ```
 
-- [ ] **Step 8: Add the workloads and their hand-written config to `dev/kustomization.yaml`**
+- [x] **Step 8: Add the workloads and their hand-written config to `dev/kustomization.yaml`**
 
 Replace the `resources` list and add the generators, keeping `generatorOptions` and the existing `store-seed-files`
 generator:
@@ -1007,12 +1001,12 @@ secretGenerator:
 
 These ten generated objects are the hand-written stand-ins. The operator plan removes them when KMO takes over.
 
-- [ ] **Step 9: Put Argo Rollouts in front of the `deploy` task**
+- [x] **Step 9: Put Argo Rollouts in front of the `deploy` task**
 
 In `mise.toml`, make the `deploy` task's `run` list start with:
 
 ```toml
-  "kubectl apply -k dev/argo-rollouts",
+  "kubectl apply --server-side -k dev/argo-rollouts",
   "kubectl wait --for=condition=Established crd/rollouts.argoproj.io --timeout=60s",
 ```
 
@@ -1024,7 +1018,7 @@ and end with:
 
 The Rollout kind must exist before a Rollout can be created, which is why the install is applied and waited for first.
 
-- [ ] **Step 10: Deploy and verify**
+- [x] **Step 10: Deploy and verify**
 
 Run: `mise run deploy && kubectl get deploy,statefulset,daemonset,cronjob,rollout,pods -n shop` Expected: `orders-api`
 2/2, `inventory` 2/2, `node-agent` 2 desired and 2 ready, `checkout` with 2 desired and 2 available, and the CronJob
@@ -1040,7 +1034,7 @@ LOG_LEVEL=debug
 
 `REGION` and `SHARED_API_TOKEN` are absent because nothing merges the common files yet.
 
-- [ ] **Step 11: Write `docs/index.md`**
+- [x] **Step 11: Write `docs/index.md`**
 
 ````markdown
 # KMO documentation
@@ -1057,7 +1051,7 @@ receiver are still to come.
 - The [design](superpowers/specs/2026-10-10-kmo-operator-core-design.md) describes what is being built and why.
 ````
 
-- [ ] **Step 12: Write `docs/getting-started.md`**
+- [x] **Step 12: Write `docs/getting-started.md`**
 
 ````markdown
 # Getting started
@@ -1100,7 +1094,7 @@ for.
 `mise run cluster:down` deletes the cluster and everything in it.
 ````
 
-- [ ] **Step 13: Extend the Commands section of `CLAUDE.md`**
+- [x] **Step 13: Extend the Commands section of `CLAUDE.md`**
 
 Add to the list under `## Commands`:
 
@@ -1111,7 +1105,7 @@ Add to the list under `## Commands`:
 - `mise run store -- <aws args>` runs the AWS CLI against the local RustFS, for example `mise run store -- s3 ls`.
 ```
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 npm run format && mise run lint
@@ -1119,7 +1113,7 @@ git add -A
 git commit -m "chore: add sample workloads of each supported kind with hand-written config"
 ```
 
-- [ ] **After (show, then pause):** Demonstrate the two problems from the spec's Purpose section.
+- [x] **After (show, then pause):** Demonstrate the two problems from the spec's Purpose section.
 
   1. Staleness: `printf 'GREETING=changed in the store\n' > /tmp/config.env && mise run store -- s3 cp /tmp/config.env
      s3://kmo-config/shop/orders-api/config.env`, then show `kubectl get configmap orders-api-kmo -n shop -o yaml` is
@@ -1129,8 +1123,6 @@ git commit -m "chore: add sample workloads of each supported kind with hand-writ
      `kubectl logs -n shop deploy/orders-api` still prints the old greeting.
 
   Restore with `mise run deploy`. Ask for questions before Task 4.
-
-
 
 ### Task 4: Spike, part one: RustFS notifications and versioning
 
@@ -1152,7 +1144,7 @@ versions. A tiny echo server stands in for the receiver and logs whatever RustFS
   `shop/orders-api/config.env` in bucket `kmo-config`: `rustfs-put.json` for an upload, `rustfs-delete.json` for a
   delete. Also the findings document.
 
-- [ ] **Step 1: Deploy the echo server**
+- [x] **Step 1: Deploy the echo server**
 
 Write `/tmp/kmo-spike/echo.yaml`:
 
@@ -1220,7 +1212,7 @@ spec:
 
 Run: `kubectl apply -f /tmp/kmo-spike/echo.yaml && kubectl rollout status deploy/echo -n kmo-dev`
 
-- [ ] **Step 2: Turn on notifications in `dev/store/rustfs.yaml`**
+- [x] **Step 2: Turn on notifications in `dev/store/rustfs.yaml`**
 
 Add to the RustFS container's `env` list:
 
@@ -1241,7 +1233,7 @@ Add to the RustFS container's `env` list:
 
 The suffix `_PRIMARY` names the target `primary`, which gives it the address `arn:rustfs:sqs:us-east-1:primary:webhook`.
 
-- [ ] **Step 3: Subscribe both buckets in `dev/store/seed-job.yaml`**
+- [x] **Step 3: Subscribe both buckets in `dev/store/seed-job.yaml`**
 
 Inside the `for bucket` loop, after the `put-bucket-versioning` line, add:
 
@@ -1250,13 +1242,13 @@ Inside the `for bucket` loop, after the `put-bucket-versioning` line, add:
                   '{"QueueConfigurations":[{"Id":"kmo","QueueArn":"arn:rustfs:sqs:us-east-1:primary:webhook","Events":["s3:ObjectCreated:*","s3:ObjectRemoved:*"]}]}'
 ```
 
-- [ ] **Step 4: Redeploy and watch the seed arrive as events**
+- [x] **Step 4: Redeploy and watch the seed arrive as events**
 
 Run: `mise run deploy && kubectl logs deploy/echo -n kmo-dev | head -20` Expected: one JSON line per request. Record in
 the findings: whether `HEAD` health checks appear, the `POST` path, and the exact `authorization` value (the docs say
 `Bearer spike-token`).
 
-- [ ] **Step 5: Capture one upload and one delete**
+- [x] **Step 5: Capture one upload and one delete**
 
 Run:
 
@@ -1277,7 +1269,7 @@ and `s3.object.key` equal to `shop%2Forders-api%2Fconfig.env` (or the same key u
 file's `eventName` starts with `s3:ObjectCreated`, the second with `s3:ObjectRemoved`. If the events arrived in the
 other order, swap the files.
 
-- [ ] **Step 6: Check how awkward keys are encoded**
+- [x] **Step 6: Check how awkward keys are encoded**
 
 Run:
 
@@ -1290,7 +1282,7 @@ mise run store -- s3 rm "s3://kmo-config/shop/orders-api/with space+plus.env"
 Record the exact encoded key. Task 10 decodes `+` as a space and `%XX` as a byte; if RustFS encodes a space as `%20` and
 leaves `+` literal, note it in the findings so Task 10's decoder can be adjusted.
 
-- [ ] **Step 7: Check versioning**
+- [x] **Step 7: Check versioning**
 
 Run:
 
@@ -1311,7 +1303,7 @@ mise run store -- s3api get-object --bucket kmo-config --key shop/orders-api/con
 
 Record whether `get-object` without a version ID returns a `VersionId` field; the operator reports that in status.
 
-- [ ] **Step 8: Check what happens while the target is down**
+- [x] **Step 8: Check what happens while the target is down**
 
 The receiver will not exist until the last plan, so RustFS must cope with an absent target.
 
@@ -1329,7 +1321,7 @@ sleep 60 && kubectl logs deploy/echo -n kmo-dev | jq -r 'select(.method == "POST
 Record three answers: does RustFS become ready with the target down, does the seed Job succeed, and are the queued
 events delivered once the target is back (a count above zero).
 
-- [ ] **Step 9: Write the findings so far**
+- [x] **Step 9: Write the findings so far**
 
 Create `docs/superpowers/spikes/2026-10-10-kmo-operator-core-spike.md`:
 
@@ -1359,7 +1351,7 @@ Notes:
 
 Fill in every answer and the verdict from what was observed, quoting the relevant log line where it helps.
 
-- [ ] **Step 10: Decide, restore and commit**
+- [x] **Step 10: Decide, restore and commit**
 
 If the verdict is FAIL (no webhook delivery in the S3 format, or no usable versioning), stop and bring the findings to
 the user. The spec's fallback is another store with a third normalizer.
@@ -1383,10 +1375,8 @@ git add -A
 git commit -m "chore: confirm RustFS notifications and versioning in a spike, capture event payloads"
 ```
 
-- [ ] **After (show, then pause):** Walk the user through the findings table and one captured payload. Ask for questions
+- [x] **After (show, then pause):** Walk the user through the findings table and one captured payload. Ask for questions
   before Task 5.
-
-
 
 ### Task 5: Spike, part two: Pepr
 
@@ -1405,7 +1395,7 @@ each thing the design needs, and that it works inside the npm workspace. None of
 - Consumes: the cluster with Argo Rollouts and the `shop` workloads from Task 3.
 - Produces: the completed findings document, which the operator plan is written from.
 
-- [ ] **Step 1: Create a workspace library for the module to import**
+- [x] **Step 1: Create a workspace library for the module to import**
 
 `packages/spike-lib/package.json`:
 
@@ -1429,7 +1419,7 @@ export function shout(text: string): string {
 
 This is source-only TypeScript, exactly how `@kmo/core` will be published to the operator.
 
-- [ ] **Step 2: Scaffold the Pepr module inside the workspace**
+- [x] **Step 2: Scaffold the Pepr module inside the workspace**
 
 Run:
 
@@ -1446,7 +1436,7 @@ Expected: `packages/kmo-spike/` with `pepr.ts`, `package.json` and `capabilities
 it Pepr runs `git init` inside the repository. Record in the findings whether `npm install` at the root succeeds and
 where `pepr` lands (`node_modules/pepr` at the root or under the package).
 
-- [ ] **Step 3: Write the spike capability**
+- [x] **Step 3: Write the spike capability**
 
 `packages/kmo-spike/capabilities/spike.ts`:
 
@@ -1531,7 +1521,7 @@ new PeprModule(cfg, [Spike]);
 If an import or method name here does not match Pepr 2.0.3, correct it from the generated `capabilities/hello-pepr.ts`
 and <https://docs.pepr.dev>, and record the correction in the findings. That is the spike doing its job.
 
-- [ ] **Step 4: Install the Widget definition and a namespace**
+- [x] **Step 4: Install the Widget definition and a namespace**
 
 Run:
 
@@ -1564,7 +1554,7 @@ EOF
 
 The `Missing` kind is deliberately not installed.
 
-- [ ] **Step 5: Build and deploy the module**
+- [x] **Step 5: Build and deploy the module**
 
 Run:
 
@@ -1586,7 +1576,7 @@ Set a shell variable for the watcher's log command, using the Deployment name ju
 WATCHER="kubectl logs -n pepr-system deploy/pepr-kmo-spike-watcher --since=2m"
 ```
 
-- [ ] **Step 6: Reconcile and its triggers**
+- [x] **Step 6: Reconcile and its triggers**
 
 Run each command, then `$WATCHER | grep SPIKE`, and record whether a `SPIKE reconcile widget` line appeared:
 
@@ -1609,7 +1599,7 @@ The four answers matter to the design:
 - The status patch should ideally not trigger one. If it does, the operator needs a guard against reconciling in
   response to its own status updates. Record which.
 
-- [ ] **Step 7: Admission, including a lookup of other resources**
+- [x] **Step 7: Admission, including a lookup of other resources**
 
 Run:
 
@@ -1632,7 +1622,7 @@ Expected: the first is refused with `forbidden widgets are rejected`. The second
 `message already claimed by widget one`, which proves an admission check can look up other resources, as the
 one-resource-per-workload rule requires. Record both messages as kubectl printed them.
 
-- [ ] **Step 8: Watches on other kinds, and a kind that appears later**
+- [x] **Step 8: Watches on other kinds, and a kind that appears later**
 
 Run:
 
@@ -1665,19 +1655,19 @@ Record whether the watch picks the kind up on its own, only after a watcher rest
 (`kubectl rollout restart -n pepr-system deploy/pepr-kmo-spike-watcher`), or not at all. This decides how the operator
 treats Rollout targets on clusters without Argo Rollouts.
 
-- [ ] **Step 9: The schedule**
+- [x] **Step 9: The schedule**
 
 Run: `sleep 130 && kubectl logs -n pepr-system deploy/pepr-kmo-spike-watcher --since=3m | grep "schedule tick"`
 Expected: at least two lines about a minute apart. Record the observed interval.
 
-- [ ] **Step 10: Two things to record without depending on the answer**
+- [x] **Step 10: Two things to record without depending on the answer**
 
 - Namespace: look in `packages/kmo-spike/dist/` for the generated manifest and Helm chart, and at `npx pepr build
   --help`. Record whether the install namespace can be anything other than `pepr-system`.
 - Several copies: from <https://docs.pepr.dev/user-guide/pepr-modules> and the resource names seen in Step 5 (they carry
   the module's UUID), record whether two modules, or two copies of one module with different UUIDs, can share a cluster.
 
-- [ ] **Step 11: Complete the findings**
+- [x] **Step 11: Complete the findings**
 
 Append to `docs/superpowers/spikes/2026-10-10-kmo-operator-core-spike.md`:
 
@@ -1720,7 +1710,7 @@ Verdict: PASS or FAIL.
 Fill in every answer and verdict, then list under "Consequences" anything the operator plan must account for, such as a
 guard against status-triggered reconciles or a restart when a kind appears.
 
-- [ ] **Step 12: Clean up**
+- [x] **Step 12: Clean up**
 
 Run:
 
@@ -1739,7 +1729,7 @@ git status --short
 Expected: only the findings document is modified. If the manifest in `dist/` has a different file name, use the one that
 is there.
 
-- [ ] **Step 13: Decide and commit**
+- [x] **Step 13: Decide and commit**
 
 If check 2 or check 3 failed, stop: the spec says the affected part of the design is revisited with the user before the
 build continues.
@@ -1750,11 +1740,9 @@ git add -A
 git commit -m "chore: record Pepr spike findings"
 ```
 
-- [ ] **After (show, then pause):** Walk the user through the findings and the consequences list. Ask for questions
+- [x] **After (show, then pause):** Walk the user through the findings and the consequences list. Ask for questions
   before Task 6. The remaining tasks do not depend on Pepr, so they can go ahead even while a Pepr finding is being
   discussed.
-
-
 
 ### Task 6: Core package and the env file parser
 
@@ -2071,8 +2059,6 @@ git commit -m "feat: add core package with the env file parser"
 - [ ] **After (show, then pause):** Show the test output as a readable list with `npx vitest run --reporter=verbose`.
   Invite the user to add a line to a test and see it fail. Ask for questions before Task 7.
 
-
-
 ### Task 7: Merging, hashing and building the outputs
 
 **Before (explain to the user):** This is the heart of the "no needless restarts" promise. Common values and workload
@@ -2296,8 +2282,6 @@ git commit -m "feat: add merging, hashing and output building to core"
 - [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose packages/core/test/render.test.ts` and point
   at the two hash tests: they are the spec's "a change that leaves a workload's effective values unchanged causes no
   restart", stated as code. Ask for questions before Task 8.
-
-
 
 ### Task 8: ConfigSync defaults
 
@@ -2529,8 +2513,6 @@ git commit -m "feat: add ConfigSync defaulting to core"
 
 - [ ] **After (show, then pause):** Put the spec's example ConfigSync next to the first `describe` block and show they
   say the same thing. Ask for questions before Task 9.
-
-
 
 ### Task 9: Store lookup and tenant rules
 
@@ -2814,8 +2796,6 @@ git commit -m "feat: add store lookup, key building and tenant access rules to c
 
 - [ ] **After (show, then pause):** Read the "what a ConfigSync may read" tests aloud against the spec's "Keeping
   tenants apart" section. Ask for questions before Task 10.
-
-
 
 ### Task 10: Event normalizers and matching
 
@@ -3180,8 +3160,6 @@ git commit -m "feat: add event normalizers and event matching to core"
 - [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose` and show the whole core package reading as a
   description of KMO's rules. Summarize what exists, and say that the next plan, the operator, is written from the spike
   findings.
-
-
 
 ## What comes next
 

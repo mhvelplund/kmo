@@ -1,0 +1,63 @@
+{
+  "EventName": "s3:ObjectCreated:Put",
+  "Key": "kmo-config/shop/orders-api/config.env",
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "rustfs:s3",
+      "awsRegion": "",
+      "eventTime": "2026-10-10T18:19:43.999Z",
+      "eventName": "s3:ObjectCreated:Put",
+      "userIdentity": {
+        "principalId": "kmoadmin"
+      },
+      "requestParameters": {
+        "x-request-id": "07bb0176-d33a-47b7-a2ce-4c7a2864565a",
+        "amz-sdk-request": "attempt=1",
+        "x-amz-checksum-crc64nvme": "jCAUEEC8aOA=",
+        "x-amz-date": "20261010T181943Z",
+        "authorization": "***redacted***",
+        "content-length": "30",
+        "principalId": "kmoadmin",
+        "user-agent": "aws-cli/2.37.12 md/awscrt#0.37.0 ua/2.1 os/linux#6.18.33.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.14.6 md/pyimpl#CPython m/AN,G,E,N,b,Af,W,Z cfg/retry-mode#standard md/installer#exe sid/8f2fb699a605 md/distrib#ubuntu.24 md/prompt#off md/command#s3.cp",
+        "x-amz-sdk-checksum-algorithm": "CRC64NVME",
+        "accept-encoding": "identity",
+        "x-amz-content-sha256": "***redacted***",
+        "host": "localhost:9000",
+        "expect": "100-continue",
+        "amz-sdk-invocation-id": "cddf65ba-9865-4f3b-b67f-5957046e264e"
+      },
+      "responseElements": {
+        "x-amz-id-2": "",
+        "x-amz-request-id": "07bb0176-d33a-47b7-a2ce-4c7a2864565a"
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "Config",
+        "bucket": {
+          "name": "kmo-config",
+          "ownerIdentity": {
+            "principalId": "kmoadmin"
+          },
+          "arn": "arn:aws:s3:::kmo-config"
+        },
+        "object": {
+          "key": "shop%2Forders-api%2Fconfig.env",
+          "size": 30,
+          "eTag": "38fae9c614db51c59dac9e7634265a2d",
+          "contentType": "application/octet-stream",
+          "userMetadata": {
+            "content-type": "application/octet-stream"
+          },
+          "versionId": "17f8bb38-5650-4d7c-9ad7-26acaf89de5f",
+          "sequencer": "18DD3DFD1732AD58"
+        }
+      },
+      "source": {
+        "host": "localhost:9000",
+        "port": "9000",
+        "userAgent": "aws-cli/2.37.12 md/awscrt#0.37.0 ua/2.1 os/linux#6.18.33.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.14.6 md/pyimpl#CPython m/AN,G,E,N,b,Af,W,Z cfg/retry-mode#standard md/installer#exe sid/8f2fb699a605 md/distrib#ubuntu.24 md/prompt#off md/command#s3.cp"
+      }
+    }
+  ]
+}

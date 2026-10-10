@@ -1,0 +1,5 @@
+[default]
+region = us-east-1
+endpoint_url = http://localhost:9000
+s3 =
+    addressing_style = path

@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: store-seed
+  namespace: kmo-dev
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: amazon/aws-cli:2.37.12
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              aws configure set default.s3.addressing_style path
+              until aws s3api list-buckets >/dev/null 2>&1; do echo "waiting for the store"; sleep 2; done
+              for bucket in kmo-config kmo-tenant; do
+                aws s3api head-bucket --bucket "$bucket" 2>/dev/null || aws s3api create-bucket --bucket "$bucket"
+                aws s3api put-bucket-versioning --bucket "$bucket" --versioning-configuration Status=Enabled
+                aws s3api put-bucket-notification-configuration --bucket "$bucket" --notification-configuration \
+                  '{"QueueConfigurations":[{"Id":"kmo","QueueArn":"arn:rustfs:sqs:us-east-1:primary:webhook","Events":["s3:ObjectCreated:*","s3:ObjectRemoved:*"]}]}'
+              done
+              for file in /seed/*; do
+                key=$(basename "$file" | sed 's|__|/|g')
+                aws s3 cp "$file" "s3://kmo-config/$key"
+              done
+          env:
+            - name: AWS_ENDPOINT_URL
+              value: http://rustfs.kmo-dev.svc:9000
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-root
+                  key: accessKey
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-root
+                  key: secretKey
+          volumeMounts:
+            - name: seed
+              mountPath: /seed
+      volumes:
+        - name: seed
+          configMap:
+            name: store-seed-files

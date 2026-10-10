@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-report
+  namespace: shop
+spec:
+  schedule: "*/2 * * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: nightly-report
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: app
+              image: busybox:1.37.0
+              command: ["sh", "-c"]
+              args:
+                - env | grep -E '^(GREETING|LOG_LEVEL|REGION|DB_PASSWORD|SHARED_API_TOKEN)=' | sort
+              envFrom:
+                - configMapRef:
+                    name: nightly-report-kmo
+                - secretRef:
+                    name: nightly-report-kmo

@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - store/namespace.yaml
+  - store/rustfs.yaml
+  - store/seed-job.yaml
+  - workloads/namespace.yaml
+  - workloads/orders-api.yaml
+  - workloads/inventory.yaml
+  - workloads/node-agent.yaml
+  - workloads/nightly-report.yaml
+  - workloads/checkout.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: store-seed-files
+    namespace: kmo-dev
+    files:
+      - _common__config.env=store-files/_common/config.env
+      - _common__secrets.env=store-files/_common/secrets.env
+      - shop__orders-api__config.env=store-files/shop/orders-api/config.env
+      - shop__orders-api__secrets.env=store-files/shop/orders-api/secrets.env
+      - shop__inventory__config.env=store-files/shop/inventory/config.env
+      - shop__inventory__secrets.env=store-files/shop/inventory/secrets.env
+      - shop__node-agent__config.env=store-files/shop/node-agent/config.env
+      - shop__node-agent__secrets.env=store-files/shop/node-agent/secrets.env
+      - shop__nightly-report__config.env=store-files/shop/nightly-report/config.env
+      - shop__nightly-report__secrets.env=store-files/shop/nightly-report/secrets.env
+      - shop__checkout__config.env=store-files/shop/checkout/config.env
+      - shop__checkout__secrets.env=store-files/shop/checkout/secrets.env
+  - name: orders-api-kmo
+    namespace: shop
+    envs: [store-files/shop/orders-api/config.env]
+  - name: inventory-kmo
+    namespace: shop
+    envs: [store-files/shop/inventory/config.env]
+  - name: node-agent-kmo
+    namespace: shop
+    envs: [store-files/shop/node-agent/config.env]
+  - name: nightly-report-kmo
+    namespace: shop
+    envs: [store-files/shop/nightly-report/config.env]
+  - name: checkout-kmo
+    namespace: shop
+    envs: [store-files/shop/checkout/config.env]
+secretGenerator:
+  - name: orders-api-kmo
+    namespace: shop
+    envs: [store-files/shop/orders-api/secrets.env]
+  - name: inventory-kmo
+    namespace: shop
+    envs: [store-files/shop/inventory/secrets.env]
+  - name: node-agent-kmo
+    namespace: shop
+    envs: [store-files/shop/node-agent/secrets.env]
+  - name: nightly-report-kmo
+    namespace: shop
+    envs: [store-files/shop/nightly-report/secrets.env]
+  - name: checkout-kmo
+    namespace: shop
+    envs: [store-files/shop/checkout/secrets.env]

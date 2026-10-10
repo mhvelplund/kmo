@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: checkout
+  namespace: shop
+spec:
+  replicas: 2
+  strategy:
+    canary: {}
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: app
+          image: busybox:1.37.0
+          command: ["sh", "-c"]
+          args:
+            - |
+              env | grep -E '^(GREETING|LOG_LEVEL|REGION|DB_PASSWORD|SHARED_API_TOKEN)=' | sort
+              while true; do sleep 3600; done
+          envFrom:
+            - configMapRef:
+                name: checkout-kmo
+            - secretRef:
+                name: checkout-kmo

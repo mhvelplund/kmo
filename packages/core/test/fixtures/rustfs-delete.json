@@ -1,0 +1,54 @@
+{
+  "EventName": "s3:ObjectRemoved:DeleteMarkerCreated",
+  "Key": "kmo-config/shop/orders-api/config.env",
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "rustfs:s3",
+      "awsRegion": "",
+      "eventTime": "2026-10-10T18:19:44.488Z",
+      "eventName": "s3:ObjectRemoved:DeleteMarkerCreated",
+      "userIdentity": {
+        "principalId": "kmoadmin"
+      },
+      "requestParameters": {
+        "amz-sdk-request": "attempt=1",
+        "content-length": "0",
+        "x-request-id": "a8748ae7-a0eb-441e-aad5-e4b86d5ea1d0",
+        "accept-encoding": "identity",
+        "x-amz-date": "20261010T181944Z",
+        "principalId": "kmoadmin",
+        "authorization": "***redacted***",
+        "x-amz-content-sha256": "***redacted***",
+        "user-agent": "aws-cli/2.37.12 md/awscrt#0.37.0 ua/2.1 os/linux#6.18.33.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.14.6 md/pyimpl#CPython m/AN,G,E,N,b,Af,Z cfg/retry-mode#standard md/installer#exe sid/8f2fb699a605 md/distrib#ubuntu.24 md/prompt#off md/command#s3.rm",
+        "host": "localhost:9000",
+        "amz-sdk-invocation-id": "821684c4-51f5-4c5c-8191-fdda305ae02c"
+      },
+      "responseElements": {
+        "x-amz-id-2": "",
+        "x-amz-request-id": "a8748ae7-a0eb-441e-aad5-e4b86d5ea1d0"
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "Config",
+        "bucket": {
+          "name": "kmo-config",
+          "ownerIdentity": {
+            "principalId": "kmoadmin"
+          },
+          "arn": "arn:aws:s3:::kmo-config"
+        },
+        "object": {
+          "key": "shop%2Forders-api%2Fconfig.env",
+          "versionId": "e89369bf-00f0-412f-a7b9-4f489748a262",
+          "sequencer": "18DD3DFD34AFE646"
+        }
+      },
+      "source": {
+        "host": "localhost:9000",
+        "port": "9000",
+        "userAgent": "aws-cli/2.37.12 md/awscrt#0.37.0 ua/2.1 os/linux#6.18.33.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.14.6 md/pyimpl#CPython m/AN,G,E,N,b,Af,Z cfg/retry-mode#standard md/installer#exe sid/8f2fb699a605 md/distrib#ubuntu.24 md/prompt#off md/command#s3.rm"
+      }
+    }
+  ]
+}

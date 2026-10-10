@@ -70,6 +70,7 @@ Out of scope for this spec:
 | Stores as custom resources, one operator for all        | Each tenant namespace gets its own bucket and credentials without running a second operator, which Pepr does not readily support. External Secrets Operator and cert-manager separate tenants the same way.                      |
 | Outputs marked for Stakater Reloader to ignore          | Clusters that already run Reloader would otherwise roll a workload a second time for the same change. The mark does nothing where Reloader is absent, so nothing has to be detected.                                             |
 | RustFS as the local store                               | RustFS is Apache-2.0, needs no registration and uses the standard S3 notification API.                                                                                                                                           |
+| A guarded Rollout watch, on by default, with a switch   | Pepr crash-loops on a watch whose kind is missing, so the operator checks for Argo Rollouts before watching Rollouts. The check leans on Pepr internals, so a switch turns it off and falls back to the plain watch.             |
 | k3d for the local cluster                               | It is k3s in Docker: disposable, rootless, version-pinned by Mise and equipped with an image registry.                                                                                                                           |
 
 ## Architecture
@@ -229,7 +230,8 @@ Rules:
 - Targets and outputs are always in the resource's own namespace. Cross-namespace references are not possible.
 - A target's kind defaults to Deployment. The targets list defaults to a single Deployment named after the resource.
 - Rollout is the kind defined by Argo Rollouts. On a cluster without Argo Rollouts the operator still runs, and a
-  Rollout target is reported as a workload that does not exist.
+  Rollout target is reported as a workload that does not exist. This depends on the guarded Rollout watch described
+  under Configuration, which is on by default.
 - The refresh interval is a duration with a minimum of one minute.
 - The bucket always comes from the store. A ConfigSync cannot name one.
 - The status records which store was used and, for each source file, its full key in the bucket, whether it was found
@@ -365,6 +367,25 @@ Secrets are kept out of the store resources:
 - The receiver's bearer token is held in a Secret named `kmo-receiver-token` in the receiver's namespace.
 
 The operator runs in the namespace Pepr installs into. The receiver runs in a namespace of its own, `kmo-system`.
+
+### The guarded Rollout watch
+
+Pepr starts every watch a module declares, and its watcher crash-loops when the kind behind one of them is not
+installed. Left alone, a watch on Rollouts would break the operator on every cluster without Argo Rollouts.
+
+The operator therefore declares its Rollout watch through a small shim. The shim keeps the declaration in place while
+the module is built, so the permissions for Rollouts are still generated. When the operator runs, it takes the watch out
+of Pepr's hands, checks whether the Rollout kind is installed and starts the watch itself only if it is. It checks again
+whenever a custom resource definition is added or removed, so installing or removing Argo Rollouts later needs no
+restart.
+
+The shim is controlled by one operator setting, the environment variable `KMO_GUARD_ROLLOUT_WATCH`:
+
+- `true`, the default: the shim is used, as described above.
+- `false`: the Rollout watch is declared the plain Pepr way. Argo Rollouts must then be installed before the operator
+  starts. This is the way out if a Pepr upgrade breaks the shim, which relies on parts of Pepr that are not public.
+
+The setting is read once, when the operator starts. Changing it means restarting the operator.
 
 ## Repository layout
 
