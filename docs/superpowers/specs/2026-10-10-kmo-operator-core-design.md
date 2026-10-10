@@ -35,7 +35,7 @@ Out of scope for this spec:
 - Helm, ArgoCD, Terraform and Terragrunt.
 - TLS, ingress and authentication beyond a shared bearer token.
 - Automatic injection of references into workloads.
-- Workload kinds other than Deployment, StatefulSet and CronJob.
+- Workload kinds other than Deployment, StatefulSet, DaemonSet, CronJob and Argo Rollout.
 - Staggering restarts after a common-file change.
 - The config-editing UI.
 - The tool for synchronizing local developer dotenv environments with the S3 values.
@@ -68,6 +68,7 @@ Out of scope for this spec:
 | A suspend switch on each resource                       | One field covers both reasons to pause: protecting a workload from restarts during sensitive work, and preserving a hand-edited object. CronJobs and Flux use the same field name.                                               |
 | Conflicting resources rejected at admission             | The mistake is reported to the person making it, at the moment they make it, instead of surfacing later as unexplained restarts.                                                                                                 |
 | Stores as custom resources, one operator for all        | Each tenant namespace gets its own bucket and credentials without running a second operator, which Pepr does not readily support. External Secrets Operator and cert-manager separate tenants the same way.                      |
+| Outputs marked for Stakater Reloader to ignore          | Clusters that already run Reloader would otherwise roll a workload a second time for the same change. The mark does nothing where Reloader is absent, so nothing has to be detected.                                             |
 | RustFS as the local store                               | RustFS is Apache-2.0, needs no registration and uses the standard S3 notification API.                                                                                                                                           |
 | k3d for the local cluster                               | It is k3s in Docker: disposable, rootless, version-pinned by Mise and equipped with an image registry.                                                                                                                           |
 
@@ -193,7 +194,7 @@ metadata:
 spec:
   suspend: false
   targets:
-    - kind: Deployment            # Deployment | StatefulSet | CronJob
+    - kind: Deployment            # Deployment | StatefulSet | DaemonSet | CronJob | Rollout
       name: orders-api
   storeRef:
     kind: ConfigStore             # ConfigStore | ClusterConfigStore
@@ -227,6 +228,8 @@ Rules:
 
 - Targets and outputs are always in the resource's own namespace. Cross-namespace references are not possible.
 - A target's kind defaults to Deployment. The targets list defaults to a single Deployment named after the resource.
+- Rollout is the kind defined by Argo Rollouts. On a cluster without Argo Rollouts the operator still runs, and a
+  Rollout target is reported as a workload that does not exist.
 - The refresh interval is a duration with a minimum of one minute.
 - The bucket always comes from the store. A ConfigSync cannot name one.
 - The status records which store was used and, for each source file, its full key in the bucket, whether it was found
@@ -278,22 +281,28 @@ A suspended resource stops after recording that it is suspended. Otherwise each 
 3. Parse each file.
 4. Merge common values with workload values, the workload winning. Config files produce the ConfigMap data and secret
    files the Secret data.
-5. Write both objects, always, even when empty. They carry the label `app.kubernetes.io/managed-by: kmo` and an owner
-   reference to the ConfigSync.
+5. Write both objects, always, even when empty. They carry the label `app.kubernetes.io/managed-by: kmo`, the annotation
+   `reloader.stakater.com/ignore: "true"` and an owner reference to the ConfigSync.
 6. Compute a SHA-256 hash over the sorted contents of both objects and set it as the `kmo.isntall.net/config-hash`
    annotation on each target's pod template.
 7. Check each target's wiring, then update status, conditions and Events.
 
 Consequences of this design:
 
-- Deployments and StatefulSets roll when the hash changes. A StatefulSet using the `OnDelete` strategy is stamped but
-  only changes as its pods are deleted.
+- Deployments, StatefulSets and DaemonSets roll when the hash changes. A StatefulSet or DaemonSet using the `OnDelete`
+  strategy is stamped but only changes as its pods are deleted.
+- A Rollout starts a new rollout when the hash changes and follows its own canary or blue-green steps, so new values
+  reach all pods only when those steps complete.
+- A Rollout that borrows its pod template from a Deployment has no template of its own to stamp. The Deployment is the
+  target to name in that case, and the Rollout follows it.
 - CronJobs are stamped so each run records the config it used. Running Jobs are never affected.
 - A key present in both the ConfigMap and the Secret is resolved by the order of the workload's own references. KMO does
   not check for this.
 - Deleting a ConfigSync deletes its two objects through the owner reference. Running pods are unaffected, but new pods
   fail to start until the references are removed or the resource is recreated.
 - A change to a common file reconciles every resource that uses it, so many workloads may roll at once.
+- Stakater Reloader, where it is installed, leaves the two objects alone, so KMO is the only thing that restarts a
+  workload for them. Reloader still acts on the workload's other ConfigMaps and Secrets.
 
 ## Failures and warnings
 
@@ -313,6 +322,7 @@ A failure on any one file stops the whole reconcile, so a partial merge is never
 |------------------------------------------------------------------|-------------------------|
 | All four files are missing or empty                              | `SourcesFound` is false |
 | A target workload does not exist                                 | `TargetsWired` is false |
+| A Rollout target borrows its pod template from a Deployment      | `TargetsWired` is false |
 | An output object holds values but a target does not reference it | `TargetsWired` is false |
 
 An empty output object that a target does not reference is not a warning. A target counts as referencing an object if
@@ -398,7 +408,8 @@ operator and receiver are thin shells around it.
 - RustFS with versioning enabled and a webhook target pointing at the receiver.
 - A setup Job that creates two buckets, configures notifications and uploads sample files.
 - A ClusterConfigStore named `default` for the first bucket, open to all namespaces and using path addressing.
-- Three sample workloads, one of each supported kind, that print their environment, with a ConfigSync for each.
+- Argo Rollouts, installed so that Rollout targets can be exercised.
+- Five sample workloads, one of each supported kind, that print their environment, with a ConfigSync for each.
 - A second namespace acting as a trusted tenant, with its own ConfigStore for the second bucket, one sample workload and
   its ConfigSync.
 - A third namespace acting as an untrusted tenant, served by a ClusterConfigStore that allows only that namespace and
@@ -410,10 +421,10 @@ The `demo` task changes a file and shows the resulting rollout.
 
 - **Unit tests** cover the core package. The event normalizers are tested against real captured payloads.
 - **End-to-end tests** run against the local cluster. They cover a workload-file change, a common-file change, an
-  overridden common key causing no restart, each warning, each failure, a hand edit being reverted, suspending and
-  resuming, a key prefix, two stores sharing a bucket, a namespace store taking precedence over the cluster-wide one, a
-  resource being refused another namespace's files, a namespace being refused a store that does not allow it, rejection
-  of a conflicting ConfigSync, and deletion of a ConfigSync.
+  overridden common key causing no restart, a rolling update of each workload kind, each warning, each failure, a hand
+  edit being reverted, suspending and resuming, a key prefix, two stores sharing a bucket, a namespace store taking
+  precedence over the cluster-wide one, a resource being refused another namespace's files, a namespace being refused a
+  store that does not allow it, rejection of a conflicting ConfigSync, and deletion of a ConfigSync.
 - Implementation is test-first.
 
 Unit tests double as documentation of what the system is expected to do:
@@ -460,7 +471,7 @@ The steps, in order:
 5. **The custom resources.** The ConfigSync and store definitions are installed and resources can be created, though
    nothing acts on them yet.
 6. **Syncing.** The operator finds the store, reads the files, and writes the ConfigMap and Secret.
-7. **Rollouts.** The operator stamps the hash and workloads roll when values change.
+7. **Rolling updates.** The operator stamps the hash and workloads roll when values change.
 8. **Reporting.** Status, conditions, Events, and the failure and warning rules.
 9. **Staying in step.** The refresh timer, reconciling when outputs, workloads or stores change, and the suspend switch.
 10. **Guarding.** The admission check that rejects a conflicting ConfigSync.
@@ -474,8 +485,8 @@ The steps, in order:
 The build starts with a short throwaway spike that confirms three assumptions before anything depends on them:
 
 1. RustFS delivers webhook notifications in the documented format and supports versioning, on k3d.
-2. Pepr can reconcile a custom resource, validate it at admission, watch several other kinds and run a recurring
-   schedule.
+2. Pepr can reconcile a custom resource, validate it at admission, watch several other kinds, including one whose
+   definition may be missing from the cluster, and run a recurring schedule.
 3. A Pepr module works inside a multi-package repository.
 
 If the first fails, the fallback is another store with a third normalizer. If the second or third fails, the affected
