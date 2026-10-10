@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Sample values for the local environment and the tests"
+paths = ['''^dev/''', '''^packages/core/test/''', '''^docs/superpowers/plans/''']
+regexes = ['''kmo-local-secret''']

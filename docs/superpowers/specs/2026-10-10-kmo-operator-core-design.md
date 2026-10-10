@@ -57,7 +57,7 @@ Out of scope for this spec:
 ## Decisions and their reasons
 
 | Decision                                                | Reason                                                                                                                                                                                                                           |
-|---------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TypeScript with Pepr                                    | Matches the developer's preferences; Pepr was the recommended framework.                                                                                                                                                         |
 | A separate receiver that annotates resources            | Pepr has no supported way to host a custom HTTP endpoint. The split also keeps the exposed component free of store credentials, and gives webhooks, timers and manual triggers one shared code path. Flux uses the same pattern. |
 | The operator merges common and workload files           | Each workload depends on exactly two objects, which is clear to a human and simple to track. Workloads whose effective values did not change are not restarted.                                                                  |
@@ -133,14 +133,14 @@ metadata:
   name: shop
 spec:
   bucket: company-config
-  keyPrefix: shop                 # optional
+  keyPrefix: shop # optional
   region: eu-west-1
-  endpoint: ""                    # optional; empty for real S3
-  addressingStyle: VirtualHosted  # optional; VirtualHosted | Path
+  endpoint: "" # optional; empty for real S3
+  addressingStyle: VirtualHosted # optional; VirtualHosted | Path
   credentialsSecretRef:
     name: shop-store-credentials
-    namespace: kmo-system         # ClusterConfigStore only
-  allowedNamespaces:              # ClusterConfigStore only
+    namespace: kmo-system # ClusterConfigStore only
+  allowedNamespaces: # ClusterConfigStore only
     - shop
 status:
   conditions:
@@ -194,12 +194,12 @@ metadata:
 spec:
   suspend: false
   targets:
-    - kind: Deployment            # Deployment | StatefulSet | DaemonSet | CronJob | Rollout
+    - kind: Deployment # Deployment | StatefulSet | DaemonSet | CronJob | Rollout
       name: orders-api
   storeRef:
-    kind: ConfigStore             # ConfigStore | ClusterConfigStore
+    kind: ConfigStore # ConfigStore | ClusterConfigStore
     name: default
-  source:                         # keys are relative to the store's key prefix
+  source: # keys are relative to the store's key prefix
     config: shop/orders-api/config.env
     secrets: shop/orders-api/secrets.env
     commonConfig: _common/config.env
@@ -319,7 +319,7 @@ A failure on any one file stops the whole reconcile, so a partial merge is never
 **Warnings** do not stop the reconcile:
 
 | Situation                                                        | Condition               |
-|------------------------------------------------------------------|-------------------------|
+| ---------------------------------------------------------------- | ----------------------- |
 | All four files are missing or empty                              | `SourcesFound` is false |
 | A target workload does not exist                                 | `TargetsWired` is false |
 | A Rollout target borrows its pod template from a Deployment      | `TargetsWired` is false |
@@ -368,7 +368,7 @@ The operator runs in the namespace Pepr installs into. The receiver runs in a na
 
 ## Repository layout
 
-```
+```text
 zeemo/
 ├── README.md
 ├── mise.toml
