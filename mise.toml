@@ -14,7 +14,7 @@ run = ["npm install", "pre-commit install"]
 
 [tasks.lint]
 description = "Run every static check"
-run = ["npm run lint", "npm run format:check", "npm run lint:md"]
+run = ["npm run lint", "npm run format:check", "npm run lint:md", "npm run typecheck"]
 
 [tasks."cluster:up"]
 description = "Create the local k3d cluster and its image registry"
@@ -45,3 +45,7 @@ AWS_CONFIG_FILE = "{{config_root}}/dev/aws-config"
 AWS_PROFILE = "default"
 AWS_ACCESS_KEY_ID = "kmoadmin"
 AWS_SECRET_ACCESS_KEY = "kmo-local-secret"
+
+[tasks.test]
+description = "Run the unit tests"
+run = "npm test"

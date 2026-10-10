@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc",
-    "lint:md": "markdownlint \"**/*.md\""
+    "lint:md": "markdownlint \"**/*.md\"",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -24,7 +25,8 @@
     "markdownlint-cli": "0.49.1",
     "prettier": "3.9.10",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.71.1"
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
   },
   "overrides": {
     "js-yaml": "5.4.3",

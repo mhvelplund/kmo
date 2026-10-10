@@ -5,9 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## State of the repository
 
 The design spec, `docs/superpowers/specs/2026-10-10-kmo-operator-core-design.md`, is the source of truth for every
-design question; read it before proposing or building anything. The tooling exists; no product code does yet. The plan
-in `docs/superpowers/plans/2026-10-10-kmo-foundations.md` is being executed task by task, and this file is updated as
-the planned pieces below become real.
+design question; read it before proposing or building anything. The foundations plan,
+`docs/superpowers/plans/2026-10-10-kmo-foundations.md`, is complete: the tooling, the local environment, the spike and
+the core logic exist. The operator and the receiver do not. The operator plan (spec steps 5 to 11) is next and has not
+been written yet.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
 code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, namespace `kmo-system`, label
@@ -60,20 +61,32 @@ Invariants that span the design and are easy to break:
 - Outputs carry `reloader.stakater.com/ignore: "true"` so Stakater Reloader does not roll workloads a second time.
 - The receiver and operator must resolve stores and default keys with the same code, so they always agree.
 
-## Planned layout
+## Layout
 
-A multi-package repository: `packages/core` (store lookup, defaulting, dotenv parsing, merging, hashing and the event
-normalizers, with no Kubernetes or network calls), `packages/operator` (the Pepr module) and `packages/receiver` (the
-HTTP service). The operator and receiver are thin shells around core. CRDs live in `crds/`, local-only manifests in
-`dev/`, end-to-end tests in `test/e2e/`.
+An npm workspace of source-only TypeScript packages: nothing is compiled, and consumers import the `.ts` sources.
+
+`packages/core` exists and holds every decision that needs no cluster: env file parsing (`dotenv.ts`), merging and
+hashing (`render.ts`), ConfigSync defaulting (`defaults.ts`), store lookup and tenant access rules (`store.ts`), the
+RustFS and EventBridge event normalizers (`events.ts`) and event-to-ConfigSync matching (`matching.ts`). It must not
+make Kubernetes or network calls. Parse errors carry a line number and a reason, never a value, because values may be
+secrets.
+
+Still to come: `packages/operator` (the Pepr module), `packages/receiver` (the HTTP service), `crds/` and `test/e2e/`.
+The operator and receiver are to be thin shells around core. `dev/` holds the local environment; its hand-generated
+`<name>-kmo` ConfigMaps and Secrets are stand-ins until the operator writes them.
+
+The spike findings in `docs/superpowers/spikes/` record what was verified about RustFS and Pepr; read them before
+planning operator work.
 
 ## Commands
 
 Mise pins the tools and defines the tasks. Commands assume Mise is activated; otherwise prefix them with `mise x --`.
 
 - `mise run setup` installs the npm dependencies and the Git hooks.
-- `mise run lint` runs ESLint, the Prettier check and markdownlint.
+- `mise run lint` runs ESLint, the Prettier check, markdownlint and the TypeScript type check (`npm run typecheck`).
 - `npm run format` rewrites files with Prettier (line length 120). Run it before committing.
+- `mise run test` runs the unit tests with Vitest. One file: `npx vitest run packages/core/test/dotenv.test.ts`. One
+  test: add `-t "part of its name"`.
 - `mise run cluster:up` and `mise run cluster:down` create and delete the local k3d cluster. Its kubeconfig is
   `.kube/config` inside the repository.
 - `mise run deploy` installs Argo Rollouts, RustFS, the seed Job and the sample workloads from `dev/`.
@@ -82,8 +95,8 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 Pre-commit also runs gitleaks and a TypeScript type check. Commit directly to `main`; do not create branches. Use
 conventional commit messages with the types `feat`, `fix` and `chore`, for example `feat: add the env file parser`.
 
-The remaining planned tasks (`test`, `test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster with
-RustFS as the object store and Argo Rollouts installed.
+The remaining planned tasks (`test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster with RustFS as
+the object store and Argo Rollouts installed.
 
 ## How the build proceeds
 

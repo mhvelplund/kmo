@@ -1765,7 +1765,7 @@ library silently skips lines it cannot read, and the spec requires an unparsable
   - `class DotenvParseError extends Error` with `readonly line: number` and `readonly reason: string`
   - Mise task `test`; npm script `test`.
 
-- [ ] **Step 1: Set up the package and the test runner**
+- [x] **Step 1: Set up the package and the test runner**
 
 Run: `npm install --save-dev --save-exact vitest@5.0.3`
 
@@ -1804,7 +1804,7 @@ run = "npm test"
 
 Run: `npm install`
 
-- [ ] **Step 2: Write `packages/core/src/types.ts`**
+- [x] **Step 2: Write `packages/core/src/types.ts`**
 
 ```ts
 /** Values read from one env file, or merged from several. */
@@ -1854,7 +1854,7 @@ export interface Store {
 }
 ```
 
-- [ ] **Step 3: Write the failing tests**
+- [x] **Step 3: Write the failing tests**
 
 `packages/core/test/dotenv.test.ts`:
 
@@ -1957,11 +1957,11 @@ describe("an env file that cannot be parsed", () => {
 });
 ```
 
-- [ ] **Step 4: Run the tests to see them fail**
+- [x] **Step 4: Run the tests to see them fail**
 
 Run: `npm test` Expected: FAIL, because `../src/dotenv` does not exist.
 
-- [ ] **Step 5: Write `packages/core/src/dotenv.ts`**
+- [x] **Step 5: Write `packages/core/src/dotenv.ts`**
 
 ```ts
 import type { EnvValues } from "./types";
@@ -2036,12 +2036,12 @@ export * from "./types";
 export * from "./dotenv";
 ```
 
-- [ ] **Step 6: Run the tests and the checks**
+- [x] **Step 6: Run the tests and the checks**
 
 Run: `npm test && mise run lint` Expected: all tests pass; lint, format and type check are clean. Run `npm run format`
 first if Prettier complains.
 
-- [ ] **Step 7: Update `CLAUDE.md` and commit**
+- [x] **Step 7: Update `CLAUDE.md` and commit**
 
 Add to the list under `## Commands`:
 
@@ -2056,7 +2056,7 @@ git add -A
 git commit -m "feat: add core package with the env file parser"
 ```
 
-- [ ] **After (show, then pause):** Show the test output as a readable list with `npx vitest run --reporter=verbose`.
+- [x] **After (show, then pause):** Show the test output as a readable list with `npx vitest run --reporter=verbose`.
   Invite the user to add a line to a test and see it fail. Ask for questions before Task 7.
 
 ### Task 7: Merging, hashing and building the outputs
@@ -2084,7 +2084,7 @@ timestamp so that running the sync twice changes nothing.
   - `class SourceParseError extends Error` with `readonly source: SourceName`, `readonly line: number`,
     `readonly reason: string`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/hash.test.ts`:
 
@@ -2163,11 +2163,11 @@ describe("building a workload's ConfigMap and Secret", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to see them fail**
+- [x] **Step 2: Run the tests to see them fail**
 
 Run: `npm test` Expected: FAIL, because `../src/hash` and `../src/render` do not exist.
 
-- [ ] **Step 3: Write `packages/core/src/merge.ts`**
+- [x] **Step 3: Write `packages/core/src/merge.ts`**
 
 ```ts
 import type { EnvValues } from "./types";
@@ -2183,7 +2183,7 @@ export function mergeValues(common: EnvValues, workload: EnvValues): EnvValues {
 }
 ```
 
-- [ ] **Step 4: Write `packages/core/src/hash.ts`**
+- [x] **Step 4: Write `packages/core/src/hash.ts`**
 
 ```ts
 import { createHash } from "node:crypto";
@@ -2205,7 +2205,7 @@ function sortedEntries(values: EnvValues): [string, string][] {
 }
 ```
 
-- [ ] **Step 5: Write `packages/core/src/render.ts`**
+- [x] **Step 5: Write `packages/core/src/render.ts`**
 
 ```ts
 import { DotenvParseError, parseDotenv } from "./dotenv";
@@ -2270,7 +2270,7 @@ export * from "./hash";
 export * from "./render";
 ```
 
-- [ ] **Step 6: Run the tests and the checks, then commit**
+- [x] **Step 6: Run the tests and the checks, then commit**
 
 Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
@@ -2279,7 +2279,7 @@ git add -A
 git commit -m "feat: add merging, hashing and output building to core"
 ```
 
-- [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose packages/core/test/render.test.ts` and point
+- [x] **After (show, then pause):** Run `npx vitest run --reporter=verbose packages/core/test/render.test.ts` and point
   at the two hash tests: they are the spec's "a change that leaves a workload's effective values unchanged causes no
   restart", stated as code. Ask for questions before Task 8.
 
@@ -2307,7 +2307,7 @@ later the admission check all read a resource the same way.
     names no store, meaning "use the default lookup".
   - `resolveConfigSync(sync: ConfigSync): ResolvedConfigSync`, throwing `ConfigSyncSpecError`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/defaults.test.ts`:
 
@@ -2399,11 +2399,11 @@ describe("a refresh interval", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to see them fail**
+- [x] **Step 2: Run the tests to see them fail**
 
 Run: `npm test` Expected: FAIL, because `../src/defaults` does not exist.
 
-- [ ] **Step 3: Write `packages/core/src/duration.ts`**
+- [x] **Step 3: Write `packages/core/src/duration.ts`**
 
 ```ts
 const DURATION = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/;
@@ -2431,7 +2431,7 @@ export function parseDuration(text: string): number {
 }
 ```
 
-- [ ] **Step 4: Write `packages/core/src/defaults.ts`**
+- [x] **Step 4: Write `packages/core/src/defaults.ts`**
 
 ```ts
 import { ConfigSyncSpecError, parseDuration } from "./duration";
@@ -2502,7 +2502,7 @@ export * from "./duration";
 export { COMMON_FOLDER, resolveConfigSync, type ResolvedConfigSync } from "./defaults";
 ```
 
-- [ ] **Step 5: Run the tests and the checks, then commit**
+- [x] **Step 5: Run the tests and the checks, then commit**
 
 Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
@@ -2511,7 +2511,7 @@ git add -A
 git commit -m "feat: add ConfigSync defaulting to core"
 ```
 
-- [ ] **After (show, then pause):** Put the spec's example ConfigSync next to the first `describe` block and show they
+- [x] **After (show, then pause):** Put the spec's example ConfigSync next to the first `describe` block and show they
   say the same thing. Ask for questions before Task 9.
 
 ### Task 9: Store lookup and tenant rules
@@ -2538,7 +2538,7 @@ and what a ConfigSync on a shared, cluster-wide store is allowed to read. The la
   - `sourceAccessProblem(sync: ResolvedConfigSync, store: Store): string | undefined`, a reason when a source key may
     not be read, otherwise `undefined`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/store.test.ts`:
 
@@ -2680,11 +2680,11 @@ describe("what a ConfigSync may read", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to see them fail**
+- [x] **Step 2: Run the tests to see them fail**
 
 Run: `npm test` Expected: FAIL, because `../src/store` does not exist.
 
-- [ ] **Step 3: Write `packages/core/src/store.ts`**
+- [x] **Step 3: Write `packages/core/src/store.ts`**
 
 ```ts
 import { COMMON_FOLDER, type ResolvedConfigSync } from "./defaults";
@@ -2785,7 +2785,7 @@ Add to `packages/core/src/index.ts`:
 export * from "./store";
 ```
 
-- [ ] **Step 4: Run the tests and the checks, then commit**
+- [x] **Step 4: Run the tests and the checks, then commit**
 
 Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
@@ -2794,7 +2794,7 @@ git add -A
 git commit -m "feat: add store lookup, key building and tenant access rules to core"
 ```
 
-- [ ] **After (show, then pause):** Read the "what a ConfigSync may read" tests aloud against the spec's "Keeping
+- [x] **After (show, then pause):** Read the "what a ConfigSync may read" tests aloud against the spec's "Keeping
   tenants apart" section. Ask for questions before Task 10.
 
 ### Task 10: Event normalizers and matching
@@ -2821,7 +2821,7 @@ operator, so the two can never disagree. The RustFS tests use the payloads captu
   - `normalizeEventBridgeEvent(body: unknown): StoreEvent[]`, throwing `MalformedEventError`
   - `findAffectedSyncs(event: StoreEvent, syncs: ConfigSync[], stores: Store[]): ConfigSync[]`
 
-- [ ] **Step 1: Save the EventBridge sample**
+- [x] **Step 1: Save the EventBridge sample**
 
 `packages/core/test/fixtures/eventbridge-object-created.json` is the "Object Created" example from the Amazon S3 user
 guide:
@@ -2859,7 +2859,7 @@ guide:
 EventBridge keys are taken as they are, without URL decoding, unlike S3 notifications. That is an assumption from the
 AWS documentation; the AWS integration spec should confirm it against a live event.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 `packages/core/test/events.test.ts`:
 
@@ -3001,11 +3001,11 @@ describe("a changed file", () => {
 });
 ```
 
-- [ ] **Step 3: Run the tests to see them fail**
+- [x] **Step 3: Run the tests to see them fail**
 
 Run: `npm test` Expected: FAIL, because `../src/events` and `../src/matching` do not exist.
 
-- [ ] **Step 4: Write `packages/core/src/events.ts`**
+- [x] **Step 4: Write `packages/core/src/events.ts`**
 
 ```ts
 /** A change to one file in a bucket, whatever announced it. */
@@ -3077,7 +3077,7 @@ function decodeKey(key: string, index: number): string {
 If Task 4's findings say RustFS leaves `+` literal and writes a space as `%20`, remove the `.replace(/\+/g, " ")` and
 change the decoding test's expected key to match what was recorded.
 
-- [ ] **Step 5: Write `packages/core/src/matching.ts`**
+- [x] **Step 5: Write `packages/core/src/matching.ts`**
 
 ```ts
 import { resolveConfigSync } from "./defaults";
@@ -3120,12 +3120,12 @@ export * from "./events";
 export * from "./matching";
 ```
 
-- [ ] **Step 6: Run the tests and the checks**
+- [x] **Step 6: Run the tests and the checks**
 
 Run: `npm run format && npm test && mise run lint` Expected: all pass. If a captured-payload test fails, compare the
 fixture with the findings from Task 4 before touching the code; the capture is the truth about what RustFS sends.
 
-- [ ] **Step 7: Bring `CLAUDE.md` up to date and commit**
+- [x] **Step 7: Bring `CLAUDE.md` up to date and commit**
 
 Replace the `## Planned layout` section of `CLAUDE.md` with:
 
@@ -3157,7 +3157,7 @@ git add -A
 git commit -m "feat: add event normalizers and event matching to core"
 ```
 
-- [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose` and show the whole core package reading as a
+- [x] **After (show, then pause):** Run `npx vitest run --reporter=verbose` and show the whole core package reading as a
   description of KMO's rules. Summarize what exists, and say that the next plan, the operator, is written from the spike
   findings.
 
