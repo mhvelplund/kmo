@@ -32,7 +32,8 @@ The Mise tasks `test:e2e` and `demo`, the tenant namespaces and the receiver's w
 - The product is **KMO**; Kubernetes names use `kmo`. Never write "zeemo" in code, manifests or docs. The directory
   `/home/mhvelplund/projects/zeemo` keeps its name.
 - API group `kmo.isntall.net`, version `v1alpha1`. Receiver namespace `kmo-system`. Local-only namespace `kmo-dev`.
-- Commit directly to `main`. Do not create branches or worktrees.
+- Commit directly to `main`. Do not create branches or worktrees. Use conventional commit messages with the types
+  `feat`, `fix` and `chore`.
 - Pinned versions: Node `24.21.0`, kubectl `1.37.1`, k3d `5.9.0`, pre-commit `4.6.2`, aws-cli `2.37.12`, k3s image
   `rancher/k3s:v1.37.1-k3s1`, `rustfs/rustfs:1.0.1`, `amazon/aws-cli:2.37.12`, `busybox:1.37.0`, Argo Rollouts
   `v1.10.0`, TypeScript `5.9.3` (Pepr 2.0.3 requires `^5.8.3`; do not move to TypeScript 7), Pepr `2.0.3`.
@@ -75,7 +76,7 @@ package.json                   npm workspace root and scripts
 tsconfig.json                  one type-check config for all packages
 eslint.config.js
 vitest.config.ts               (Task 6)
-.prettierrc.json  .prettierignore  .markdownlint-cli2.jsonc  .gitleaks.toml  .pre-commit-config.yaml  .gitignore
+.prettierrc.json  .prettierignore  .markdownlint.jsonc  .markdownlintignore  .gitleaks.toml  .pre-commit-config.yaml  .gitignore
 README.md
 docs/index.md                  docs entry point (Task 3)
 docs/getting-started.md        local environment walkthrough (Task 3)
@@ -114,7 +115,7 @@ each commit so mistakes are caught locally. No Kubernetes yet.
 **Files:**
 
 - Create: `mise.toml`, `package.json`, `tsconfig.json`, `eslint.config.js`, `.prettierrc.json`, `.prettierignore`,
-  `.markdownlint-cli2.jsonc`, `.gitleaks.toml`, `.pre-commit-config.yaml`, `.gitignore`, `README.md`
+  `.markdownlint.jsonc`, `.markdownlintignore`, `.gitleaks.toml`, `.pre-commit-config.yaml`, `.gitignore`, `README.md`
 - Modify: `docs/superpowers/specs/2026-10-10-kmo-operator-core-design.md` (lint fixes only), `CLAUDE.md`
 
 **Interfaces:**
@@ -177,7 +178,7 @@ dist/
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc",
-    "lint:md": "markdownlint-cli2 \"**/*.md\""
+    "lint:md": "markdownlint \"**/*.md\""
   }
 }
 ```
@@ -188,7 +189,7 @@ Run:
 
 ```bash
 npm install --save-dev --save-exact typescript@5.9.3 eslint@10.12.0 @eslint/js@10.0.1 typescript-eslint@8.71.1 \
-  eslint-config-prettier@10.1.8 prettier@3.9.10 markdownlint-cli2@0.23.3 @types/node@24
+  eslint-config-prettier@10.1.8 prettier@3.9.10 markdownlint-cli@0.49.1 @types/node@24
 ```
 
 Expected: `package-lock.json` and `node_modules/` appear, with no peer dependency errors.
@@ -254,16 +255,25 @@ packages/spike-lib/
 packages/core/test/fixtures/
 ```
 
-`.markdownlint-cli2.jsonc`:
+`.markdownlint.jsonc`:
 
 ```jsonc
 {
-  "config": {
-    "MD013": { "line_length": 120, "code_blocks": false, "tables": false },
-  },
-  "ignores": ["**/node_modules/**", "docs/superpowers/plans/**", "packages/kmo-spike/**"],
+  "MD013": { "line_length": 120, "code_blocks": false, "tables": false },
 }
 ```
+
+`.markdownlintignore`:
+
+```text
+node_modules/
+docs/superpowers/plans/
+packages/kmo-spike/
+```
+
+The linter is `markdownlint-cli`, not `markdownlint-cli2`: the latter pulls in packages with open advisories that have
+no fixed release. Three transitive packages are pinned to patched versions through `overrides` in `package.json`
+(`js-yaml` 5.4.3, `katex` 0.19.0, `smol-toml` 1.9.1) so that `npm audit` reports nothing.
 
 `.gitleaks.toml` (the local environment and the tests use obvious sample values):
 
@@ -313,7 +323,7 @@ repos:
         pass_filenames: false
       - id: markdownlint
         name: markdownlint
-        entry: npx markdownlint-cli2
+        entry: npx markdownlint
         language: system
         types: [markdown]
         exclude: ^docs/superpowers/plans/
@@ -689,7 +699,7 @@ the first spike check. Stop and tell the user; the spec's fallback is another st
 ```bash
 npm run format
 git add -A
-git commit -m "Add local cluster with RustFS and seeded sample files"
+git commit -m "chore: add local cluster with RustFS and seeded sample files"
 ```
 
 - [ ] **After (show, then pause):** Show `kubectl get all -n kmo-dev`, the Job's log, and
@@ -1106,7 +1116,7 @@ Add to the list under `## Commands`:
 ```bash
 npm run format && mise run lint
 git add -A
-git commit -m "Add sample workloads of each supported kind with hand-written config"
+git commit -m "chore: add sample workloads of each supported kind with hand-written config"
 ```
 
 - [ ] **After (show, then pause):** Demonstrate the two problems from the spec's Purpose section.
@@ -1370,7 +1380,7 @@ kubectl delete -f /tmp/kmo-spike/echo.yaml
 mise run deploy
 npm run format && mise run lint
 git add -A
-git commit -m "Spike: confirm RustFS notifications and versioning, capture event payloads"
+git commit -m "chore: confirm RustFS notifications and versioning in a spike, capture event payloads"
 ```
 
 - [ ] **After (show, then pause):** Walk the user through the findings table and one captured payload. Ask for questions
@@ -1737,7 +1747,7 @@ build continues.
 ```bash
 npm run format && mise run lint
 git add -A
-git commit -m "Spike: record Pepr findings"
+git commit -m "chore: record Pepr spike findings"
 ```
 
 - [ ] **After (show, then pause):** Walk the user through the findings and the consequences list. Ask for questions
@@ -2055,7 +2065,7 @@ Add to the list under `## Commands`:
 
 ```bash
 git add -A
-git commit -m "Add core package with the env file parser"
+git commit -m "feat: add core package with the env file parser"
 ```
 
 - [ ] **After (show, then pause):** Show the test output as a readable list with `npx vitest run --reporter=verbose`.
@@ -2280,7 +2290,7 @@ Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
 ```bash
 git add -A
-git commit -m "Add merging, hashing and output building to core"
+git commit -m "feat: add merging, hashing and output building to core"
 ```
 
 - [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose packages/core/test/render.test.ts` and point
@@ -2514,7 +2524,7 @@ Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
 ```bash
 git add -A
-git commit -m "Add ConfigSync defaulting to core"
+git commit -m "feat: add ConfigSync defaulting to core"
 ```
 
 - [ ] **After (show, then pause):** Put the spec's example ConfigSync next to the first `describe` block and show they
@@ -2799,7 +2809,7 @@ Run: `npm run format && npm test && mise run lint` Expected: all pass.
 
 ```bash
 git add -A
-git commit -m "Add store lookup, key building and tenant access rules to core"
+git commit -m "feat: add store lookup, key building and tenant access rules to core"
 ```
 
 - [ ] **After (show, then pause):** Read the "what a ConfigSync may read" tests aloud against the spec's "Keeping
@@ -3164,7 +3174,7 @@ plan is next.
 ```bash
 npm run format && mise run lint
 git add -A
-git commit -m "Add event normalizers and event matching to core"
+git commit -m "feat: add event normalizers and event matching to core"
 ```
 
 - [ ] **After (show, then pause):** Run `npx vitest run --reporter=verbose` and show the whole core package reading as a

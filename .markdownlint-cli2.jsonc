@@ -1,6 +1,0 @@
-{
-  "config": {
-    "MD013": { "line_length": 120, "code_blocks": false, "tables": false },
-  },
-  "ignores": ["**/node_modules/**", "docs/superpowers/plans/**", "packages/kmo-spike/**"],
-}

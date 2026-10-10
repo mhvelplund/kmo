@@ -31,7 +31,7 @@ repos:
         pass_filenames: false
       - id: markdownlint
         name: markdownlint
-        entry: npx markdownlint-cli2
+        entry: npx markdownlint
         language: system
         types: [markdown]
         exclude: ^docs/superpowers/plans/

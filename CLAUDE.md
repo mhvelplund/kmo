@@ -75,7 +75,8 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 - `mise run lint` runs ESLint, the Prettier check and markdownlint.
 - `npm run format` rewrites files with Prettier (line length 120). Run it before committing.
 
-Pre-commit also runs gitleaks and a TypeScript type check. Commit directly to `main`; do not create branches.
+Pre-commit also runs gitleaks and a TypeScript type check. Commit directly to `main`; do not create branches. Use
+conventional commit messages with the types `feat`, `fix` and `chore`, for example `feat: add the env file parser`.
 
 The remaining planned tasks (`cluster:up`, `cluster:down`, `deploy`, `test`, `test:e2e`, `demo`) do not exist yet. The
 local environment will be a k3d cluster with RustFS as the object store and Argo Rollouts installed.
