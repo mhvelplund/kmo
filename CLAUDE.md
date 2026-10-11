@@ -7,8 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The design spec, `docs/superpowers/specs/2026-10-10-kmo-operator-core-design.md`, is the source of truth for every
 design question; read it before proposing or building anything. The foundations plan,
 `docs/superpowers/plans/2026-10-10-kmo-foundations.md`, is complete: the tooling, the local environment, the spike and
-the core logic exist. The operator and the receiver do not. The operator plan (spec steps 5 to 11) is next and has not
-been written yet.
+the core logic exist. The operator plan, `docs/superpowers/plans/2026-10-11-kmo-operator.md` (spec steps 5 to 11), is in
+progress: Tasks 1 to 6 are done. The operator deploys, the guarded Rollout watch is proven on the cluster, the three
+custom resource definitions are installed, and a reconcile reads the source files of each ConfigSync, from every store
+it lists, writes one ConfigMap and one Secret for each, and stamps the config hash on the targets, so they roll when
+their values change. It reports nothing on the resource yet, and a sync must be asked for by hand. Task 7, reporting, is
+next. The receiver does not exist.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
 code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, label
@@ -39,24 +43,33 @@ triggers one shared code path.
 
 Custom resources, all `kmo.isntall.net/v1alpha1`:
 
-- **ConfigSync** (namespaced, at most one per workload): names targets, a store, source keys and output names. Every
-  spec field is optional and defaults from the resource's name and namespace.
-- **ConfigStore** (namespaced) and **ClusterConfigStore** (cluster-wide, with an allowed-namespaces list): one bucket
-  plus optional key prefix, and the credentials Secret to reach it.
+- **ConfigSync** (namespaced, at most one per workload): names targets, an ordered list of sources and output names. A
+  source is a reference to a store, with `common: false` to leave out that store's common files. Every spec field is
+  optional and defaults from the resource's name and namespace. A ConfigSync never names a key.
+- **ConfigStore** (namespaced) and **ClusterConfigStore** (cluster-wide, with an allowed-namespaces list): everything
+  about the bucket is in the block `spec.s3`: the bucket and optional key prefix, the folders of the service files and
+  the common files (`serviceFolder`, `commonFolder`, with the placeholders `{namespace}` and `{name}`), and the identity
+  to reach it: a ServiceAccount whose token AWS exchanges for short-lived keys, or a credentials Secret for stores that
+  cannot do that, such as the local RustFS.
 
-A reconcile fetches four files (workload and `_common`, config and secrets), merges them with the workload winning,
-writes one ConfigMap and one Secret, then stamps a SHA-256 hash of their contents on each target's pod template as
-`kmo.isntall.net/config-hash`. The hash, not a timestamp, is what makes reconciling repeatable and prevents restarts
-when nothing effective changed.
+Other kinds of store (Parameter Store, Secrets Manager) are planned and not built. Each will be a block next to `s3`
+with its own identity, will yield the same four sets of values, and will announce changes through EventBridge. Do not
+build a general store interface before the second kind exists.
+
+A reconcile fetches four files from each source (workload and `_common`, config and secrets), merges every common file
+and then every workload file in the order of the sources, the last one winning, writes one ConfigMap and one Secret,
+then stamps a SHA-256 hash of their contents on each target's pod template as `kmo.isntall.net/config-hash`. The hash,
+not a timestamp, is what makes reconciling repeatable and prevents restarts when nothing effective changed.
 
 Invariants that span the design and are easy to break:
 
 - The store is the source of truth; hand edits to managed objects are overwritten (unless the ConfigSync is suspended).
-- Any failure (unreachable store, unparsable file, disallowed key, unlabelled object already holding the output name)
-  stops the whole reconcile and leaves existing objects untouched. A partial merge is never written.
+- Any failure (a store that is missing or unreachable, an unparsable file, an unlabelled object already holding the
+  output name) stops the whole reconcile and leaves existing objects untouched. A partial merge is never written.
 - Targets and outputs are always in the ConfigSync's own namespace.
-- A ConfigSync on a cluster-wide store may read only its own namespace's folder and the common folder, whatever its spec
-  says.
+- A ConfigSync on a cluster-wide store may read only its own namespace's folder and the common folder. This holds by
+  construction: the keys come from the store's folders, and the definition refuses a ClusterConfigStore whose
+  `serviceFolder` lacks `{namespace}`.
 - Conflicting ConfigSyncs (shared target or output name) are rejected at admission; suspended resources keep their
   claims.
 - Outputs carry `reloader.stakater.com/ignore: "true"` so Stakater Reloader does not roll workloads a second time.
@@ -67,15 +80,26 @@ Invariants that span the design and are easy to break:
 An npm workspace of source-only TypeScript packages: nothing is compiled, and consumers import the `.ts` sources.
 
 `packages/core` exists and holds every decision that needs no cluster: env file parsing (`dotenv.ts`), merging
-(`merge.ts`), hashing (`hash.ts`), turning the four source files into outputs (`render.ts`), ConfigSync defaulting
-(`defaults.ts`, `duration.ts`), store lookup and tenant access rules (`store.ts`), the RustFS and EventBridge event
-normalizers (`events.ts`) and event-to-ConfigSync matching (`matching.ts`). Shared types are in `types.ts`. The package
-is `@kmo/core` and everything is exported through `src/index.ts`. It must not make Kubernetes or network calls. Parse
-errors carry a line number and a reason, never a value, because values may be secrets.
+(`merge.ts`), hashing (`hash.ts`), turning the source files of every source into outputs (`render.ts`), ConfigSync
+defaulting (`defaults.ts`, `duration.ts`), store lookup and the keys of a store's files (`store.ts`), the RustFS and
+EventBridge event normalizers (`events.ts`) and event-to-ConfigSync matching (`matching.ts`), and what a reconcile reads
+or why it cannot start (`plan.ts`). Shared types are in `types.ts`. The package is `@kmo/core` and everything is
+exported through `src/index.ts`. It must not make Kubernetes or network calls. Parse errors carry a line number and a
+reason, never a value, because values may be secrets.
 
-Still to come: `packages/operator` (the Pepr module), `packages/receiver` (the HTTP service), `crds/` and `test/e2e/`.
-The operator and receiver are to be thin shells around core. `dev/` holds the local environment; its hand-generated
-`<name>-kmo` ConfigMaps and Secrets are stand-ins until the operator writes them.
+`packages/operator` is the Pepr module, `@kmo/operator`: `pepr.ts` is the entry point, `src/capability.ts` holds every
+binding, `src/kinds.ts` the client kinds and `src/guarded-kind.ts` the shim for watches on a kind that may be missing,
+`src/cluster.ts` the small cluster reads (stores, credentials), `src/s3.ts` the store reads and `src/reconcile.ts` one
+reconcile from start to finish. Its `package.json` holds the Pepr settings and the hand-written RBAC rules. `test/e2e/`
+holds scripts that check the operator on the local cluster.
+
+`crds/` holds the definitions of ConfigSync, ConfigStore and ClusterConfigStore. The `deploy` and `operator:deploy`
+tasks apply them first, so the kinds exist before anything watches them. `dev/kmo/` holds the `kmo-system` namespace and
+the local cluster-wide store `default`; `dev/workloads/configsyncs.yaml` holds one ConfigSync for each sample workload.
+
+Still to come: `packages/receiver` (the HTTP service). The operator and receiver are to be thin shells around core.
+`dev/` holds the local environment. The operator writes the `<name>-kmo` ConfigMaps and Secrets of the sample workloads,
+so their pods start only after `mise run operator:deploy`.
 
 One root `tsconfig.json` checks every package and emits nothing. Imports are extensionless, `verbatimModuleSyntax`
 requires `import type` for types, and `noUncheckedIndexedAccess` is on.
@@ -85,11 +109,18 @@ requires `import type` for types, and `noUncheckedIndexedAccess` is on.
 The spike findings in `docs/superpowers/spikes/` record what was verified about RustFS and Pepr; read them before
 planning operator work. The consequences that are easiest to trip over:
 
-- The root `overrides` pins `js-yaml` for every package, which breaks `pepr build`. Scope it to `markdownlint-cli` and
-  regenerate the lockfile when `packages/operator` is added.
+- The root `overrides` are scoped to the package that brings each dependency. `@kubernetes/client-node` must keep
+  `js-yaml` 4, or `pepr build` breaks. A changed override needs a regenerated lockfile.
+- npm installs two copies of `kubernetes-fluent-client`, one for the operator and one inside Pepr, and each has its own
+  list of registered kinds. Take `RegisterKind`, `kind` and `K8s` from `pepr`, or Pepr does not know the kind.
 - A watch on a kind that is not installed crash-loops Pepr's watcher and takes the refresh timer with it. Hence the
-  guarded Rollout watch (`KMO_GUARD_ROLLOUT_WATCH`, on by default). It is decided but untested, and must be proven on
-  the cluster before anything depends on it.
+  guarded Rollout watch (`KMO_GUARD_ROLLOUT_WATCH`, on by default), proven on the cluster by
+  `mise run check:rollout-guard`. Another optional kind needs a `GuardedKind` value in `src/kinds.ts` and a call to
+  `guardKind` after its watches are declared; never a plain watch.
+- The shim behind that guard uses parts of Pepr that are not public. Treat every Pepr upgrade as a possible rewrite of
+  the shim: Pepr stays pinned to an exact version, and `docs/upgrading-pepr.md` is the procedure to move the pin.
+- Pepr creates the admission Deployment `pepr-kmo` only when the module has an admission binding. Until then only
+  `pepr-kmo-watcher` runs.
 - The operator's own status updates trigger a reconcile. Return early when neither `metadata.generation` nor the sync
   annotation has changed.
 - Every watcher start reconciles every resource once.
@@ -106,6 +137,14 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
   `docs/superpowers/plans/` is excluded from both Prettier and markdownlint.
 - `mise run test` runs the unit tests with Vitest. One file: `npx vitest run packages/core/test/dotenv.test.ts`. One
   test: add `-t "part of its name"`.
+- `mise run operator:deploy` builds the operator and installs it into the cluster; `mise run operator:logs` shows the
+  watcher log.
+- `mise run test:e2e` runs the end-to-end smoke test, `test/e2e/smoke.sh`, in about two minutes. It needs Docker,
+  creates the cluster and installs the local environment when they are missing, always installs the operator from the
+  working tree, and uses its own namespace `kmo-smoke`. Run it at the end of every task that changes the operator, and
+  add a check to it for each new behavior that can be seen on the cluster.
+- `mise run check:rollout-guard` proves the guarded Rollout watch. It removes and reinstalls Argo Rollouts on the local
+  cluster and takes about seven minutes.
 - `mise run cluster:up` and `mise run cluster:down` create and delete the local k3d cluster. Its kubeconfig is
   `.kube/config` inside the repository.
 - `mise run deploy` installs Argo Rollouts, RustFS, the seed Job and the sample workloads from `dev/`.
@@ -116,25 +155,32 @@ Pre-commit runs ESLint, the Prettier check, markdownlint, the TypeScript type ch
 not start the next step unasked. Use conventional commit messages with the types `feat`, `fix` and `chore`, for example
 `feat: add the env file parser`.
 
-The remaining planned tasks (`test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster named `kmo`
-with Argo Rollouts installed, RustFS in the `kmo-dev` namespace holding the bucket `kmo-config`, and the sample
-workloads in `shop`. `kubectl` reaches this cluster only when Mise is active, because Mise sets `KUBECONFIG`.
+The remaining planned task, `demo`, does not exist yet. The local environment is a k3d cluster named `kmo` with Argo
+Rollouts installed, RustFS in the `kmo-dev` namespace holding the bucket `kmo-config`, and the sample workloads in
+`shop`. `kubectl` reaches this cluster only when Mise is active, because Mise sets `KUBECONFIG`.
 
 ## How the build proceeds
 
-The spec lists thirteen ordered steps. Steps 1 to 4 (tooling, the local cluster, the spike and the core logic) are done;
-the next is step 5, the custom resources. Work one step at a time: explain beforehand what is being built and which
-Kubernetes idea it introduces, finish with something observable, then pause for questions. Do not batch several steps
-into one change. Implementation is test-first.
+The spec lists thirteen ordered steps. Steps 1 to 4 (tooling, the local cluster, the spike and the core logic) are done,
+and so are the two operator tasks that come before step 5, step 5, the custom resources, step 6, syncing, and step 7,
+rolling updates; the next is step 8, reporting. Work one step at a time: explain beforehand what is being built and
+which Kubernetes idea it introduces, finish with something observable, then pause for questions. Do not batch several
+steps into one change. Implementation is test-first.
 
 ## Conventions
 
 - **Comments.** Terse, and only where something is hard to understand. No reasons, no change history. Every exported
-  function gets a terse JSDoc block covering what it does, its parameters and its return value.
+  function gets a terse JSDoc block covering what it does, its parameters and its return value. Every attribute of an
+  exported interface gets a one-line JSDoc.
 - **Unit tests.** Each test reads as a statement of behavior a person can follow. Full coverage is not a goal; leave out
   tests that assert nothing a reader would care about. Event normalizers are tested against real captured payloads.
 - **Docs.** Written for people: high level, few code fences. `docs/index.md` is the entry point, and the default page in
   any `docs` sub-folder is named `index.md`.
+- **`dev/README.md`.** One line for each entry in `dev/`, saying what it is for. Update it in the same change that adds,
+  removes or repurposes an entry.
 - **Root README.** A short introduction and file layout, a pointer to `docs/index.md`, and installation instructions for
   a cluster (in full or by link).
+- **Nothing about one person's computer in committed files.** No absolute local paths (such as a home directory), user
+  names, AWS account IDs, profiles or regions. Write paths relative to the repository root. A person's own settings
+  belong in `CLAUDE.local.md`, which is not committed; read it for values such as the AWS region.
 - **KISS.** Use ASD-STE100 Simplified Technical English to explain things.

@@ -1,33 +1,45 @@
 import { ConfigSyncSpecError, parseDuration } from "./duration";
-import type { ConfigSync, SourceName, StoreKind, TargetKind } from "./types";
+import type { ConfigSync, SourceSpec, StoreKind, TargetKind } from "./types";
 
 export { ConfigSyncSpecError } from "./duration";
 
-/** Folder holding the files shared by every workload of a store. */
+/** Folder holding the files shared by every workload of a store, unless the store names another. */
 export const COMMON_FOLDER = "_common";
 
 const DEFAULT_REFRESH_INTERVAL = "30m";
 const MINIMUM_REFRESH_INTERVAL_MS = 60_000;
 
+/** One source of a ConfigSync with its defaults filled in. */
+export interface ResolvedSource {
+  /** Absent when the store named default is meant. */
+  storeRef?: { kind: StoreKind; name: string };
+  /** Whether the store's common files are read. */
+  common: boolean;
+}
+
 /** A ConfigSync with every default filled in. */
 export interface ResolvedConfigSync {
+  /** Name of the resource. */
   name: string;
+  /** Namespace of the resource, its targets and its outputs. */
   namespace: string;
+  /** True when syncing is paused. */
   suspend: boolean;
+  /** Workloads that receive the config hash. */
   targets: { kind: TargetKind; name: string }[];
-  /** Absent when the spec names no store. */
-  storeRef?: { kind: StoreKind; name: string };
-  /** Keys relative to the store's key prefix. */
-  source: Record<SourceName, string>;
+  /** The stores to read from, in order; later ones win. */
+  sources: ResolvedSource[];
+  /** Names of the ConfigMap and the Secret that are written. */
   output: { configMapName: string; secretName: string };
+  /** Time between syncs without an event, in milliseconds. */
   refreshIntervalMs: number;
 }
 
 /**
  * Fills in the defaults of a ConfigSync from its name and namespace.
  * @param sync The resource as stored in the cluster.
- * @returns The resource with no optional field left open, except the store reference.
- * @throws ConfigSyncSpecError if the refresh interval is unreadable or under one minute.
+ * @returns The resource with no optional field left open, except the store of the default source.
+ * @throws ConfigSyncSpecError if the refresh interval is unreadable or under one minute, or a store is listed twice.
  */
 export function resolveConfigSync(sync: ConfigSync): ResolvedConfigSync {
   const { name, namespace } = sync.metadata;
@@ -43,17 +55,23 @@ export function resolveConfigSync(sync: ConfigSync): ResolvedConfigSync {
     namespace,
     suspend: spec.suspend ?? false,
     targets: targets.map((target) => ({ kind: target.kind ?? "Deployment", name: target.name })),
-    storeRef: spec.storeRef && { kind: spec.storeRef.kind ?? "ConfigStore", name: spec.storeRef.name },
-    source: {
-      config: spec.source?.config ?? `${namespace}/${name}/config.env`,
-      secrets: spec.source?.secrets ?? `${namespace}/${name}/secrets.env`,
-      commonConfig: spec.source?.commonConfig ?? `${COMMON_FOLDER}/config.env`,
-      commonSecrets: spec.source?.commonSecrets ?? `${COMMON_FOLDER}/secrets.env`,
-    },
+    sources: resolveSources(spec.sources),
     output: {
       configMapName: spec.output?.configMapName ?? `${name}-kmo`,
       secretName: spec.output?.secretName ?? `${name}-kmo`,
     },
     refreshIntervalMs,
   };
+}
+
+function resolveSources(sources: SourceSpec[] | undefined): ResolvedSource[] {
+  if (!sources?.length) return [{ common: true }];
+  const seen = new Set<string>();
+  return sources.map((source) => {
+    const storeRef = { kind: source.storeRef.kind ?? "ConfigStore", name: source.storeRef.name };
+    const label = `${storeRef.kind}/${storeRef.name}`;
+    if (seen.has(label)) throw new ConfigSyncSpecError(`store ${label} is listed more than once`);
+    seen.add(label);
+    return { storeRef, common: source.common ?? true };
+  });
 }

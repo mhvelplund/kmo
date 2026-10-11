@@ -1,95 +1,83 @@
 import { describe, expect, it } from "vitest";
-import { resolveConfigSync } from "../src/defaults";
-import { findStore, fullKey, sourceAccessProblem, storeLabel } from "../src/store";
-import type { ConfigSyncSpec, Store } from "../src/types";
+import { findStore, storeKeys, storeLabel } from "../src/store";
+import type { S3Location, Store } from "../src/types";
 
-const credentials = { name: "store-credentials" };
+const credentialsSecretRef = { name: "store-credentials" };
 
 /** A ConfigStore in a namespace. */
-function namespaceStore(name: string, namespace: string, keyPrefix?: string): Store {
+function namespaceStore(name: string, namespace: string, s3: Partial<S3Location> = {}): Store {
   return {
     kind: "ConfigStore",
     metadata: { name, namespace },
-    spec: { bucket: `${namespace}-bucket`, region: "eu-west-1", keyPrefix, credentialsSecretRef: credentials },
+    spec: { s3: { bucket: `${namespace}-bucket`, region: "eu-west-1", credentialsSecretRef, ...s3 } },
   };
 }
 
 /** A ClusterConfigStore open to the given namespaces. */
-function clusterStore(name: string, allowedNamespaces: string[] | undefined, keyPrefix?: string): Store {
+function clusterStore(name: string, allowedNamespaces: string[] | undefined, s3: Partial<S3Location> = {}): Store {
   return {
     kind: "ClusterConfigStore",
     metadata: { name },
-    spec: {
-      bucket: "company-config",
-      region: "eu-west-1",
-      keyPrefix,
-      allowedNamespaces,
-      credentialsSecretRef: credentials,
-    },
+    spec: { s3: { bucket: "company-config", region: "eu-west-1", credentialsSecretRef, ...s3 }, allowedNamespaces },
   };
 }
 
-/** The resolved ConfigSync orders-api in namespace shop. */
-function ordersApi(spec?: ConfigSyncSpec) {
-  return resolveConfigSync({ metadata: { name: "orders-api", namespace: "shop" }, spec });
-}
-
-describe("a ConfigSync that names no store", () => {
-  it("uses the ConfigStore called default in its own namespace", () => {
+describe("a source that names no store", () => {
+  it("uses the ConfigStore called default in the ConfigSync's own namespace", () => {
     const own = namespaceStore("default", "shop");
-    expect(findStore(ordersApi(), [clusterStore("default", ["*"]), own])).toEqual({ ok: true, store: own });
+    expect(findStore("shop", undefined, [clusterStore("default", ["*"]), own])).toEqual({ ok: true, store: own });
   });
 
-  it("otherwise uses the ClusterConfigStore called default, if that allows its namespace", () => {
+  it("otherwise uses the ClusterConfigStore called default, if that allows the namespace", () => {
     const shared = clusterStore("default", ["shop"]);
-    expect(findStore(ordersApi(), [namespaceStore("default", "billing"), shared])).toEqual({ ok: true, store: shared });
+    expect(findStore("shop", undefined, [namespaceStore("default", "billing"), shared])).toEqual({
+      ok: true,
+      store: shared,
+    });
   });
 
-  it("finds no store when the cluster-wide default does not allow its namespace", () => {
-    expect(findStore(ordersApi(), [clusterStore("default", ["billing"])])).toEqual({
+  it("finds no store when the cluster-wide default does not allow the namespace", () => {
+    expect(findStore("shop", undefined, [clusterStore("default", ["billing"])])).toEqual({
       ok: false,
       reason: 'no store is named and no default store is available to namespace "shop"',
     });
   });
 
   it("finds no store when there are no default stores at all", () => {
-    expect(findStore(ordersApi(), [namespaceStore("team", "shop")]).ok).toBe(false);
+    expect(findStore("shop", undefined, [namespaceStore("team", "shop")]).ok).toBe(false);
   });
 });
 
-describe("a ConfigSync that names a store", () => {
-  it("uses the ConfigStore of that name in its own namespace", () => {
-    const team = namespaceStore("team", "shop");
-    expect(findStore(ordersApi({ storeRef: { name: "team" } }), [namespaceStore("team", "billing"), team])).toEqual({
-      ok: true,
-      store: team,
-    });
+describe("a source that names a store", () => {
+  const team = { kind: "ConfigStore", name: "team" } as const;
+  const shared = { kind: "ClusterConfigStore", name: "shared" } as const;
+
+  it("uses the ConfigStore of that name in the ConfigSync's own namespace", () => {
+    const own = namespaceStore("team", "shop");
+    expect(findStore("shop", team, [namespaceStore("team", "billing"), own])).toEqual({ ok: true, store: own });
   });
 
   it("cannot use a ConfigStore from another namespace", () => {
-    expect(findStore(ordersApi({ storeRef: { name: "team" } }), [namespaceStore("team", "billing")])).toEqual({
+    expect(findStore("shop", team, [namespaceStore("team", "billing")])).toEqual({
       ok: false,
       reason: 'ConfigStore "team" was not found in namespace "shop"',
     });
   });
 
-  it("can use a ClusterConfigStore that lists its namespace or allows all with *", () => {
-    const storeRef = { kind: "ClusterConfigStore", name: "shared" } as const;
-    expect(findStore(ordersApi({ storeRef }), [clusterStore("shared", ["billing", "shop"])]).ok).toBe(true);
-    expect(findStore(ordersApi({ storeRef }), [clusterStore("shared", ["*"])]).ok).toBe(true);
+  it("can use a ClusterConfigStore that lists the namespace or allows all with *", () => {
+    expect(findStore("shop", shared, [clusterStore("shared", ["billing", "shop"])]).ok).toBe(true);
+    expect(findStore("shop", shared, [clusterStore("shared", ["*"])]).ok).toBe(true);
   });
 
-  it("is refused by a ClusterConfigStore that does not list its namespace", () => {
-    const storeRef = { kind: "ClusterConfigStore", name: "shared" } as const;
-    expect(findStore(ordersApi({ storeRef }), [clusterStore("shared", ["billing"])])).toEqual({
+  it("is refused by a ClusterConfigStore that does not list the namespace", () => {
+    expect(findStore("shop", shared, [clusterStore("shared", ["billing"])])).toEqual({
       ok: false,
       reason: 'ClusterConfigStore "shared" does not allow namespace "shop"',
     });
   });
 
   it("is refused by a ClusterConfigStore that lists no namespaces, since there is no default", () => {
-    const storeRef = { kind: "ClusterConfigStore", name: "shared" } as const;
-    expect(findStore(ordersApi({ storeRef }), [clusterStore("shared", undefined)]).ok).toBe(false);
+    expect(findStore("shop", shared, [clusterStore("shared", undefined)]).ok).toBe(false);
   });
 });
 
@@ -99,43 +87,40 @@ describe("a store's label", () => {
   });
 });
 
-describe("the full key of a file", () => {
-  it("is the source key itself when the store has no prefix", () => {
-    expect(fullKey(clusterStore("shared", ["*"]), "shop/orders-api/config.env")).toBe("shop/orders-api/config.env");
+describe("the files a store holds for a ConfigSync", () => {
+  it("are in a folder named after the namespace and name, next to a common folder", () => {
+    expect(storeKeys(clusterStore("shared", ["*"]), "shop", "orders-api", true)).toEqual({
+      config: "shop/orders-api/config.env",
+      secrets: "shop/orders-api/secrets.env",
+      commonConfig: "_common/config.env",
+      commonSecrets: "_common/secrets.env",
+    });
   });
 
-  it("puts the store's prefix in front, with or without a trailing slash on the prefix", () => {
-    expect(fullKey(clusterStore("shared", ["*"], "prod"), "_common/config.env")).toBe("prod/_common/config.env");
-    expect(fullKey(clusterStore("shared", ["*"], "prod/"), "_common/config.env")).toBe("prod/_common/config.env");
-  });
-});
-
-describe("what a ConfigSync may read", () => {
-  const shared = clusterStore("shared", ["*"]);
-
-  it("is its own namespace folder and the common folder, on a cluster-wide store", () => {
-    expect(sourceAccessProblem(ordersApi(), shared)).toBeUndefined();
-    expect(sourceAccessProblem(ordersApi({ source: { config: "shop/other-app/config.env" } }), shared)).toBeUndefined();
+  it("leave out the common files when the source does not want them", () => {
+    expect(storeKeys(clusterStore("shared", ["*"]), "shop", "orders-api", false)).toEqual({
+      config: "shop/orders-api/config.env",
+      secrets: "shop/orders-api/secrets.env",
+    });
   });
 
-  it("is never another namespace's folder, on a cluster-wide store", () => {
-    expect(sourceAccessProblem(ordersApi({ source: { secrets: "billing/ledger/secrets.env" } }), shared)).toBe(
-      'source "secrets" is outside the folders namespace "shop" may read from a cluster-wide store',
-    );
+  it("are under the store's prefix, with or without a trailing slash on the prefix", () => {
+    expect(storeKeys(clusterStore("shared", ["*"], { keyPrefix: "prod" }), "shop", "orders-api", true)).toMatchObject({
+      config: "prod/shop/orders-api/config.env",
+      commonConfig: "prod/_common/config.env",
+    });
+    expect(storeKeys(clusterStore("shared", ["*"], { keyPrefix: "prod/" }), "shop", "orders-api", true)).toMatchObject({
+      config: "prod/shop/orders-api/config.env",
+    });
   });
 
-  it("is not a folder whose name merely starts with its namespace", () => {
-    expect(sourceAccessProblem(ordersApi({ source: { config: "shop-admin/app/config.env" } }), shared)).toBeDefined();
-  });
-
-  it("is any key at all in a store of its own namespace", () => {
-    const own = namespaceStore("default", "shop");
-    expect(sourceAccessProblem(ordersApi({ source: { config: "anything/app.env" } }), own)).toBeUndefined();
-  });
-
-  it.each(["/shop/orders-api/config.env", "shop/../billing/config.env", ""])("never includes the key %j", (key) => {
-    expect(sourceAccessProblem(ordersApi({ source: { config: key } }), namespaceStore("default", "shop"))).toBe(
-      'source "config" is not a usable key',
-    );
+  it("are where the store says, when it sets its own folders", () => {
+    const own = namespaceStore("team", "shop", { serviceFolder: "apps/{name}", commonFolder: "shared/{namespace}" });
+    expect(storeKeys(own, "shop", "orders-api", true)).toEqual({
+      config: "apps/orders-api/config.env",
+      secrets: "apps/orders-api/secrets.env",
+      commonConfig: "shared/shop/config.env",
+      commonSecrets: "shared/shop/secrets.env",
+    });
   });
 });

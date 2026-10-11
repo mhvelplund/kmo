@@ -1,0 +1,45 @@
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ConfigSync
+metadata:
+  name: orders-api
+  namespace: shop
+---
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ConfigSync
+metadata:
+  name: inventory
+  namespace: shop
+spec:
+  targets:
+    - kind: StatefulSet
+      name: inventory
+---
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ConfigSync
+metadata:
+  name: node-agent
+  namespace: shop
+spec:
+  targets:
+    - kind: DaemonSet
+      name: node-agent
+---
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ConfigSync
+metadata:
+  name: nightly-report
+  namespace: shop
+spec:
+  targets:
+    - kind: CronJob
+      name: nightly-report
+---
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ConfigSync
+metadata:
+  name: checkout
+  namespace: shop
+spec:
+  targets:
+    - kind: Rollout
+      name: checkout

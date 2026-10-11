@@ -14,15 +14,6 @@ describe("a ConfigSync with an empty spec", () => {
     expect(resolved.targets).toEqual([{ kind: "Deployment", name: "orders-api" }]);
   });
 
-  it("reads its namespace and name folder, and the common folder", () => {
-    expect(resolved.source).toEqual({
-      config: "shop/orders-api/config.env",
-      secrets: "shop/orders-api/secrets.env",
-      commonConfig: "_common/config.env",
-      commonSecrets: "_common/secrets.env",
-    });
-  });
-
   it("writes a ConfigMap and a Secret named after itself with a -kmo suffix", () => {
     expect(resolved.output).toEqual({ configMapName: "orders-api-kmo", secretName: "orders-api-kmo" });
   });
@@ -32,8 +23,8 @@ describe("a ConfigSync with an empty spec", () => {
     expect(resolved.suspend).toBe(false);
   });
 
-  it("names no store, leaving the choice to the default lookup", () => {
-    expect(resolved.storeRef).toBeUndefined();
+  it("has one source that names no store, leaving the choice to the default lookup, and reads the common files", () => {
+    expect(resolved.sources).toEqual([{ common: true }]);
   });
 });
 
@@ -42,14 +33,11 @@ describe("a ConfigSync that sets fields", () => {
     const resolved = resolveConfigSync(
       ordersApi({
         suspend: true,
-        source: { config: "shared/app.env" },
         output: { secretName: "orders-secrets" },
         refreshInterval: "1h30m",
       }),
     );
     expect(resolved.suspend).toBe(true);
-    expect(resolved.source.config).toBe("shared/app.env");
-    expect(resolved.source.secrets).toBe("shop/orders-api/secrets.env");
     expect(resolved.output).toEqual({ configMapName: "orders-api-kmo", secretName: "orders-secrets" });
     expect(resolved.refreshIntervalMs).toBe(90 * 60 * 1000);
   });
@@ -66,11 +54,36 @@ describe("a ConfigSync that sets fields", () => {
     expect(resolveConfigSync(ordersApi({ targets: [] })).targets).toEqual([{ kind: "Deployment", name: "orders-api" }]);
   });
 
-  it("means a ConfigStore when it names a store without a kind", () => {
-    expect(resolveConfigSync(ordersApi({ storeRef: { name: "team" } })).storeRef).toEqual({
-      kind: "ConfigStore",
-      name: "team",
+  it("means a ConfigStore when a source names a store without a kind", () => {
+    expect(resolveConfigSync(ordersApi({ sources: [{ storeRef: { name: "team" } }] })).sources).toEqual([
+      { storeRef: { kind: "ConfigStore", name: "team" }, common: true },
+    ]);
+  });
+
+  it("keeps its sources in the order they are written, each reading the common files unless it says otherwise", () => {
+    const resolved = resolveConfigSync(
+      ordersApi({
+        sources: [
+          { storeRef: { kind: "ClusterConfigStore", name: "company" } },
+          { storeRef: { name: "team" }, common: false },
+        ],
+      }),
+    );
+    expect(resolved.sources).toEqual([
+      { storeRef: { kind: "ClusterConfigStore", name: "company" }, common: true },
+      { storeRef: { kind: "ConfigStore", name: "team" }, common: false },
+    ]);
+  });
+
+  it("falls back to the default source when its source list is empty", () => {
+    expect(resolveConfigSync(ordersApi({ sources: [] })).sources).toEqual([{ common: true }]);
+  });
+
+  it("is rejected when it lists the same store twice", () => {
+    const twice = ordersApi({
+      sources: [{ storeRef: { name: "team" } }, { storeRef: { name: "team" }, common: false }],
     });
+    expect(() => resolveConfigSync(twice)).toThrow("store ConfigStore/team is listed more than once");
   });
 });
 

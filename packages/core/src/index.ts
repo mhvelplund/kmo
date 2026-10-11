@@ -8,3 +8,6 @@ export { COMMON_FOLDER, resolveConfigSync, type ResolvedConfigSync } from "./def
 export * from "./store";
 export * from "./events";
 export * from "./matching";
+export * from "./plan";
+export * from "./outputs";
+export * from "./workload";

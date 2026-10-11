@@ -8,7 +8,9 @@ The project is under construction. See the [documentation](docs/index.md) for wh
 
 ## Layout
 
-- `packages/` holds the TypeScript packages. `core` is the shared logic.
+- `packages/` holds the TypeScript packages. `core` is the shared logic and `operator` is the Pepr module that runs in
+  the cluster.
+- `crds/` holds the definitions of the three KMO resource kinds.
 - `dev/` holds the manifests for the local environment.
 - `docs/` holds the documentation, starting at [docs/index.md](docs/index.md).
 - `mise.toml` pins the tools and defines the tasks.

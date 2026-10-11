@@ -27,13 +27,14 @@ run = "k3d cluster delete --config dev/k3d.yaml"
 [tasks.deploy]
 description = "Install the local environment into the cluster"
 run = [
+  "kubectl apply -f crds/",
+  "kubectl wait --for=condition=Established --timeout=60s crd/configsyncs.kmo.isntall.net crd/configstores.kmo.isntall.net crd/clusterconfigstores.kmo.isntall.net",
   "kubectl apply --server-side -k dev/argo-rollouts",
   "kubectl wait --for=condition=Established crd/rollouts.argoproj.io --timeout=60s",
   "kubectl delete job store-seed -n kmo-dev --ignore-not-found",
   "kubectl apply -k dev",
   "kubectl rollout status deployment/rustfs -n kmo-dev --timeout=180s",
   "kubectl wait --for=condition=Complete job/store-seed -n kmo-dev --timeout=180s",
-  "kubectl rollout status deployment/orders-api -n shop --timeout=120s",
 ]
 
 [tasks.store]
@@ -49,3 +50,25 @@ AWS_SECRET_ACCESS_KEY = "kmo-local-secret"
 [tasks.test]
 description = "Run the unit tests"
 run = "npm test"
+
+[tasks."operator:deploy"]
+description = "Build the operator and install it into the cluster"
+dir = "{{config_root}}/packages/operator"
+run = [
+  "kubectl apply -f {{config_root}}/crds/",
+  "npx pepr deploy --yes",
+  "kubectl rollout status deployment/pepr-kmo-watcher -n pepr-system --timeout=180s",
+  "kubectl rollout status deployment/orders-api -n shop --timeout=120s",
+]
+
+[tasks."operator:logs"]
+description = "Show the last ten minutes of the operator's watcher log"
+run = "kubectl logs -n pepr-system deployment/pepr-kmo-watcher --since=10m"
+
+[tasks."check:rollout-guard"]
+description = "Prove the guarded Rollout watch on the local cluster (removes and reinstalls Argo Rollouts)"
+run = "test/e2e/rollout-guard.sh"
+
+[tasks."test:e2e"]
+description = "Run the end-to-end smoke test of the operator on the local cluster"
+run = "test/e2e/smoke.sh"

@@ -1,7 +1,7 @@
 import { resolveConfigSync } from "./defaults";
 import { ConfigSyncSpecError } from "./duration";
 import type { StoreEvent } from "./events";
-import { findStore, fullKey } from "./store";
+import { findStore, storeKeys } from "./store";
 import type { ConfigSync, Store } from "./types";
 
 /**
@@ -9,15 +9,18 @@ import type { ConfigSync, Store } from "./types";
  * @param event The bucket and key that changed.
  * @param syncs Every ConfigSync in the cluster.
  * @param stores Every ConfigStore and ClusterConfigStore in the cluster.
- * @returns The ConfigSyncs with a source at that key in that bucket, suspended ones included.
+ * @returns The ConfigSyncs with a source that reads that key in that bucket, suspended ones included.
  */
 export function findAffectedSyncs(event: StoreEvent, syncs: ConfigSync[], stores: Store[]): ConfigSync[] {
   return syncs.filter((sync) => {
     const resolved = resolveOrSkip(sync);
     if (!resolved) return false;
-    const lookup = findStore(resolved, stores);
-    if (!lookup.ok || lookup.store.spec.bucket !== event.bucket) return false;
-    return Object.values(resolved.source).some((key) => fullKey(lookup.store, key) === event.key);
+    return resolved.sources.some((source) => {
+      const lookup = findStore(resolved.namespace, source.storeRef, stores);
+      if (!lookup.ok || lookup.store.spec.s3.bucket !== event.bucket) return false;
+      const keys = storeKeys(lookup.store, resolved.namespace, resolved.name, source.common);
+      return Object.values(keys).includes(event.key);
+    });
   });
 }
 

@@ -3,3 +3,4 @@ dist/
 .kube/
 .claude/worktrees/
 *.log
+CLAUDE.local.md

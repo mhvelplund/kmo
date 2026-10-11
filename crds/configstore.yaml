@@ -1,0 +1,96 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: configstores.kmo.isntall.net
+spec:
+  group: kmo.isntall.net
+  scope: Namespaced
+  names:
+    kind: ConfigStore
+    listKind: ConfigStoreList
+    plural: configstores
+    singular: configstore
+    shortNames: [cstore]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Bucket
+          type: string
+          jsonPath: .spec.s3.bucket
+        - name: Prefix
+          type: string
+          jsonPath: .spec.s3.keyPrefix
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: One location in a bucket, for the ConfigSyncs of its own namespace.
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [s3]
+              properties:
+                s3:
+                  type: object
+                  description:
+                    Where the files are, for a store that is an S3-compatible bucket, and the identity to reach it.
+                  required: [bucket, region]
+                  oneOf:
+                    - required: [serviceAccountRef]
+                    - required: [credentialsSecretRef]
+                  properties:
+                    bucket: { type: string, minLength: 1 }
+                    keyPrefix: { type: string }
+                    region: { type: string, minLength: 1 }
+                    endpoint: { type: string }
+                    addressingStyle:
+                      type: string
+                      enum: [VirtualHosted, Path]
+                    serviceFolder:
+                      type: string
+                      description: Folder of one service's files, under the key prefix. Default, {namespace}/{name}.
+                      pattern: ^[A-Za-z0-9_{}-]+(/[A-Za-z0-9_{}-]+)*$
+                    commonFolder:
+                      type: string
+                      description: Folder of the files shared by every service, under the key prefix. Default, _common.
+                      pattern: ^[A-Za-z0-9_{}-]+(/[A-Za-z0-9_{}-]+)*$
+                    serviceAccountRef:
+                      type: object
+                      description: A ServiceAccount in this namespace whose token AWS exchanges for short-lived keys.
+                      required: [name]
+                      properties:
+                        name: { type: string, minLength: 1 }
+                    credentialsSecretRef:
+                      type: object
+                      description:
+                        A Secret in this namespace with the keys accessKeyId and secretAccessKey. Not for AWS.
+                      required: [name]
+                      properties:
+                        name: { type: string, minLength: 1 }
+            status:
+              type: object
+              properties:
+                conditions:
+                  type: array
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys: [type]
+                  items:
+                    type: object
+                    required: [type, status, reason, message, lastTransitionTime]
+                    properties:
+                      type: { type: string }
+                      status: { type: string, enum: ["True", "False", "Unknown"] }
+                      reason: { type: string }
+                      message: { type: string }
+                      lastTransitionTime: { type: string, format: date-time }
+                      observedGeneration: { type: integer, format: int64 }

@@ -10,6 +10,9 @@ resources:
   - workloads/node-agent.yaml
   - workloads/nightly-report.yaml
   - workloads/checkout.yaml
+  - kmo/namespace.yaml
+  - kmo/default-store.yaml
+  - workloads/configsyncs.yaml
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
@@ -28,34 +31,3 @@ configMapGenerator:
       - shop__nightly-report__secrets.env=store-files/shop/nightly-report/secrets.env
       - shop__checkout__config.env=store-files/shop/checkout/config.env
       - shop__checkout__secrets.env=store-files/shop/checkout/secrets.env
-  - name: orders-api-kmo
-    namespace: shop
-    envs: [store-files/shop/orders-api/config.env]
-  - name: inventory-kmo
-    namespace: shop
-    envs: [store-files/shop/inventory/config.env]
-  - name: node-agent-kmo
-    namespace: shop
-    envs: [store-files/shop/node-agent/config.env]
-  - name: nightly-report-kmo
-    namespace: shop
-    envs: [store-files/shop/nightly-report/config.env]
-  - name: checkout-kmo
-    namespace: shop
-    envs: [store-files/shop/checkout/config.env]
-secretGenerator:
-  - name: orders-api-kmo
-    namespace: shop
-    envs: [store-files/shop/orders-api/secrets.env]
-  - name: inventory-kmo
-    namespace: shop
-    envs: [store-files/shop/inventory/secrets.env]
-  - name: node-agent-kmo
-    namespace: shop
-    envs: [store-files/shop/node-agent/secrets.env]
-  - name: nightly-report-kmo
-    namespace: shop
-    envs: [store-files/shop/nightly-report/secrets.env]
-  - name: checkout-kmo
-    namespace: shop
-    envs: [store-files/shop/checkout/secrets.env]

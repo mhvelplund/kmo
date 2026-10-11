@@ -1,6 +1,8 @@
 /** A change to one file in a bucket, whatever announced it. */
 export interface StoreEvent {
+  /** Bucket that holds the file. */
   bucket: string;
+  /** Full key of the file. */
   key: string;
 }
 

@@ -29,8 +29,8 @@ The Mise tasks `test:e2e` and `demo`, the tenant namespaces and the receiver's w
 
 ## Global Constraints
 
-- The product is **KMO**; Kubernetes names use `kmo`. Never write "zeemo" in code, manifests or docs. The directory
-  `/home/mhvelplund/projects/zeemo` keeps its name.
+- The product is **KMO**; Kubernetes names use `kmo`. Never write "zeemo" in code, manifests or docs. The repository's
+  directory keeps the name `zeemo`.
 - API group `kmo.isntall.net`, version `v1alpha1`. Receiver namespace `kmo-system`. Local-only namespace `kmo-dev`.
 - Commit directly to `main`. Do not create branches or worktrees. Use conventional commit messages with the types
   `feat`, `fix` and `chore`.

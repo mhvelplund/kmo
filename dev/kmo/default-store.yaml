@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kmo-config-credentials
+  namespace: kmo-system
+stringData:
+  accessKeyId: kmoadmin
+  secretAccessKey: kmo-local-secret
+---
+apiVersion: kmo.isntall.net/v1alpha1
+kind: ClusterConfigStore
+metadata:
+  name: default
+spec:
+  s3:
+    bucket: kmo-config
+    region: us-east-1
+    endpoint: http://rustfs.kmo-dev.svc:9000
+    addressingStyle: Path
+    credentialsSecretRef:
+      name: kmo-config-credentials
+      namespace: kmo-system
+  allowedNamespaces: ["*"]

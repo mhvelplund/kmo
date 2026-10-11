@@ -1,0 +1,130 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: configsyncs.kmo.isntall.net
+spec:
+  group: kmo.isntall.net
+  scope: Namespaced
+  names:
+    kind: ConfigSync
+    listKind: ConfigSyncList
+    plural: configsyncs
+    singular: configsync
+    shortNames: [csync]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Suspended
+          type: boolean
+          jsonPath: .spec.suspend
+        - name: Stores
+          type: string
+          jsonPath: .status.stores
+        - name: Last sync
+          type: date
+          jsonPath: .status.lastSyncTime
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Keeps one ConfigMap and one Secret in step with env files in a store.
+          properties:
+            spec:
+              type: object
+              properties:
+                suspend:
+                  type: boolean
+                  description: Pauses all syncing and restarts for this resource.
+                targets:
+                  type: array
+                  description:
+                    Workloads in this namespace that receive the config hash. Default, one Deployment named after this
+                    resource.
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      kind:
+                        type: string
+                        enum: [Deployment, StatefulSet, DaemonSet, CronJob, Rollout]
+                      name:
+                        type: string
+                        minLength: 1
+                sources:
+                  type: array
+                  description:
+                    The stores to read from, in order. A later source wins over an earlier one. Default, the store named
+                    default.
+                  maxItems: 8
+                  items:
+                    type: object
+                    required: [storeRef]
+                    properties:
+                      storeRef:
+                        type: object
+                        description: The store to read from.
+                        required: [name]
+                        properties:
+                          kind:
+                            type: string
+                            enum: [ConfigStore, ClusterConfigStore]
+                          name:
+                            type: string
+                            minLength: 1
+                      common:
+                        type: boolean
+                        description: Set to false to leave out the common files of this store. Default, true.
+                output:
+                  type: object
+                  description: Names of the two objects that are written. Default, this resource's name plus -kmo.
+                  properties:
+                    configMapName: { type: string, minLength: 1, maxLength: 253 }
+                    secretName: { type: string, minLength: 1, maxLength: 253 }
+                refreshInterval:
+                  type: string
+                  description: How often to sync without an event, such as 30m or 1h30m. At least one minute.
+                  pattern: ^(\d+h)?(\d+m)?(\d+s)?$
+                  minLength: 2
+            status:
+              type: object
+              properties:
+                observedGeneration: { type: integer, format: int64 }
+                lastHandledSyncRequest: { type: string }
+                lastSyncTime: { type: string, format: date-time }
+                configHash: { type: string }
+                stores:
+                  type: array
+                  items: { type: string }
+                sources:
+                  type: array
+                  items:
+                    type: object
+                    required: [store, key, found]
+                    properties:
+                      store: { type: string }
+                      key: { type: string }
+                      found: { type: boolean }
+                      versionId: { type: string }
+                conditions:
+                  type: array
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys: [type]
+                  items:
+                    type: object
+                    required: [type, status, reason, message, lastTransitionTime]
+                    properties:
+                      type: { type: string }
+                      status: { type: string, enum: ["True", "False", "Unknown"] }
+                      reason: { type: string }
+                      message: { type: string }
+                      lastTransitionTime: { type: string, format: date-time }
+                      observedGeneration: { type: integer, format: int64 }

@@ -1,5 +1,5 @@
-import { COMMON_FOLDER, type ResolvedConfigSync } from "./defaults";
-import type { SourceName, Store } from "./types";
+import { COMMON_FOLDER } from "./defaults";
+import type { SourceName, Store, StoreKind } from "./types";
 
 const DEFAULT_STORE = "default";
 
@@ -28,13 +28,17 @@ export function allowsNamespace(store: Store, namespace: string): boolean {
 }
 
 /**
- * Finds the store a ConfigSync reads from.
- * @param sync The resolved ConfigSync.
+ * Finds the store of one source of a ConfigSync.
+ * @param namespace The ConfigSync's namespace.
+ * @param storeRef The store the source names, or undefined for the store named default.
  * @param stores Every ConfigStore and ClusterConfigStore in the cluster.
- * @returns The store, or the reason none can be used.
+ * @returns The store, or the reason it cannot be used.
  */
-export function findStore(sync: ResolvedConfigSync, stores: Store[]): StoreLookup {
-  const { namespace, storeRef } = sync;
+export function findStore(
+  namespace: string,
+  storeRef: { kind: StoreKind; name: string } | undefined,
+  stores: Store[],
+): StoreLookup {
   const own = (name: string) =>
     stores.find((s) => s.kind === "ConfigStore" && s.metadata.name === name && s.metadata.namespace === namespace);
   const clusterWide = (name: string) => stores.find((s) => s.kind === "ClusterConfigStore" && s.metadata.name === name);
@@ -59,32 +63,33 @@ export function findStore(sync: ResolvedConfigSync, stores: Store[]): StoreLooku
   return { ok: true, store };
 }
 
-/**
- * Builds the key of a file in the store's bucket.
- * @param store The store, whose key prefix goes in front.
- * @param key A source key relative to that prefix.
- * @returns The full key in the bucket.
- */
-export function fullKey(store: Store, key: string): string {
-  const prefix = (store.spec.keyPrefix ?? "").replace(/^\/+|\/+$/g, "");
-  return prefix ? `${prefix}/${key}` : key;
-}
+const SERVICE_FOLDER = "{namespace}/{name}";
 
 /**
- * Checks that a ConfigSync may read each of its source keys from a store.
- * @param sync The resolved ConfigSync.
- * @param store The store it reads from.
- * @returns A reason naming the first source that may not be read, or undefined when all may.
+ * Names the files a store holds for one ConfigSync.
+ * @param store The store, which sets the prefix and the folders.
+ * @param namespace The ConfigSync's namespace.
+ * @param name The ConfigSync's name.
+ * @param common Whether the common files are wanted.
+ * @returns The full key in the bucket of each file to read.
  */
-export function sourceAccessProblem(sync: ResolvedConfigSync, store: Store): string | undefined {
-  const allowedFolders = [`${sync.namespace}/`, `${COMMON_FOLDER}/`];
-  for (const [source, key] of Object.entries(sync.source) as [SourceName, string][]) {
-    if (key === "" || key.startsWith("/") || key.split("/").includes("..")) {
-      return `source "${source}" is not a usable key`;
-    }
-    if (store.kind === "ClusterConfigStore" && !allowedFolders.some((folder) => key.startsWith(folder))) {
-      return `source "${source}" is outside the folders namespace "${sync.namespace}" may read from a cluster-wide store`;
-    }
-  }
-  return undefined;
+export function storeKeys(
+  store: Store,
+  namespace: string,
+  name: string,
+  common: boolean,
+): Partial<Record<SourceName, string>> {
+  const { keyPrefix, serviceFolder = SERVICE_FOLDER, commonFolder = COMMON_FOLDER } = store.spec.s3;
+  const prefix = (keyPrefix ?? "").replace(/^\/+|\/+$/g, "");
+  const key = (folder: string, file: string) => {
+    const path = `${folder.replaceAll("{namespace}", namespace).replaceAll("{name}", name)}/${file}`;
+    return prefix ? `${prefix}/${path}` : path;
+  };
+  return {
+    config: key(serviceFolder, "config.env"),
+    secrets: key(serviceFolder, "secrets.env"),
+    ...(common
+      ? { commonConfig: key(commonFolder, "config.env"), commonSecrets: key(commonFolder, "secrets.env") }
+      : {}),
+  };
 }

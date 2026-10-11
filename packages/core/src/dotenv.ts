@@ -1,3 +1,8 @@
+/**
+ * Q: Why not use the dotenv package?
+ * A: It is much too forgiving of syntax errors. This will fail to process "weird" files, and the operator from
+ *    consuming truncated or broken files.
+ */
 import type { EnvValues } from "./types";
 
 const KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -26,7 +31,7 @@ export class DotenvParseError extends Error {
  */
 export function parseDotenv(text: string): EnvValues {
   const values: EnvValues = {};
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+  const lines = text.split(/\r?\n/);
   lines.forEach((raw, index) => {
     const line = raw.trim();
     if (line === "" || line.startsWith("#")) return;

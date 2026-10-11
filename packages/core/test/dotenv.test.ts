@@ -56,6 +56,13 @@ describe("an env file", () => {
     });
   });
 
+  it("holds a certificate on one line, with \\n for each line break", () => {
+    const line = 'TLS_CERT="-----BEGIN CERTIFICATE-----\\nMIIBszCCAVmg\\n-----END CERTIFICATE-----"';
+    expect(parseDotenv(line)).toEqual({
+      TLS_CERT: "-----BEGIN CERTIFICATE-----\nMIIBszCCAVmg\n-----END CERTIFICATE-----",
+    });
+  });
+
   it("takes single-quoted values literally", () => {
     expect(parseDotenv("RAW='one\\ntwo # not a comment'")).toEqual({ RAW: "one\\ntwo # not a comment" });
   });

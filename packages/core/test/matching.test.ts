@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { findAffectedSyncs } from "../src/matching";
-import type { ConfigSync, ConfigSyncSpec, Store } from "../src/types";
+import type { ConfigSync, ConfigSyncSpec, S3Location, Store } from "../src/types";
 
-const credentials = { name: "store-credentials" };
+const credentialsSecretRef = { name: "store-credentials" };
 
-/** A cluster-wide default store open to every namespace. */
-function defaultStore(bucket: string, keyPrefix?: string): Store {
+/** A cluster-wide store open to every namespace. */
+function clusterStore(name: string, bucket: string, s3: Partial<S3Location> = {}): Store {
   return {
     kind: "ClusterConfigStore",
-    metadata: { name: "default" },
-    spec: { bucket, region: "eu-west-1", keyPrefix, allowedNamespaces: ["*"], credentialsSecretRef: credentials },
+    metadata: { name },
+    spec: { s3: { bucket, region: "eu-west-1", credentialsSecretRef, ...s3 }, allowedNamespaces: ["*"] },
   };
 }
+
+/** The cluster-wide store named default. */
+const defaultStore = (bucket: string, keyPrefix?: string) => clusterStore("default", bucket, { keyPrefix });
 
 /** A ConfigSync in namespace shop. */
 function sync(name: string, spec?: ConfigSyncSpec): ConfigSync {
@@ -49,9 +52,27 @@ describe("a changed file", () => {
     expect(affected("shop/orders-api/config.env", syncs, prefixed)).toEqual([]);
   });
 
-  it("is matched against a source key written out in the spec", () => {
-    const custom = [sync("orders-api", { source: { config: "shop/shared/app.env" } })];
-    expect(affected("shop/shared/app.env", custom, stores)).toEqual(["orders-api"]);
+  it("is matched in the folder that the store sets for its services", () => {
+    const custom = [clusterStore("default", "company-config", { serviceFolder: "apps/{namespace}/{name}" })];
+    expect(affected("apps/shop/orders-api/config.env", syncs, custom)).toEqual(["orders-api"]);
+    expect(affected("shop/orders-api/config.env", syncs, custom)).toEqual([]);
+  });
+
+  it("affects a ConfigSync when it is in any one of its sources", () => {
+    const overlay = { storeRef: { kind: "ClusterConfigStore", name: "overlay" } } as const;
+    const both = [
+      sync("orders-api", { sources: [{ storeRef: { kind: "ClusterConfigStore", name: "default" } }, overlay] }),
+    ];
+    const two = [...stores, clusterStore("overlay", "overlay-bucket")];
+    expect(affected("shop/orders-api/config.env", both, two, "overlay-bucket")).toEqual(["orders-api"]);
+    expect(affected("shop/orders-api/config.env", both, two, "company-config")).toEqual(["orders-api"]);
+  });
+
+  it("does not affect a ConfigSync through a common file that its source leaves out", () => {
+    const noCommon = [
+      sync("orders-api", { sources: [{ storeRef: { kind: "ClusterConfigStore", name: "default" }, common: false }] }),
+    ];
+    expect(affected("_common/config.env", noCommon, stores)).toEqual([]);
   });
 
   it("still affects a suspended ConfigSync; the operator decides to ignore the request", () => {
@@ -61,7 +82,10 @@ describe("a changed file", () => {
   });
 
   it("passes over a ConfigSync that has no usable store or an unusable spec", () => {
-    const broken = [sync("orders-api", { storeRef: { name: "gone" } }), sync("checkout", { refreshInterval: "soon" })];
+    const broken = [
+      sync("orders-api", { sources: [{ storeRef: { name: "gone" } }] }),
+      sync("checkout", { refreshInterval: "soon" }),
+    ];
     expect(affected("_common/config.env", broken, stores)).toEqual([]);
   });
 });

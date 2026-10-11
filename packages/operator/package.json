@@ -1,0 +1,124 @@
+{
+  "name": "@kmo/operator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Keeps ConfigMaps and Secrets in step with env files in an object store",
+  "pepr": {
+    "uuid": "kmo",
+    "onError": "reject",
+    "webhookTimeout": 10,
+    "customLabels": {
+      "namespace": {
+        "pepr.dev": ""
+      }
+    },
+    "alwaysIgnore": {
+      "namespaces": []
+    },
+    "admission": {
+      "alwaysIgnore": {
+        "namespaces": []
+      }
+    },
+    "watch": {
+      "alwaysIgnore": {
+        "namespaces": []
+      }
+    },
+    "includedFiles": [],
+    "env": {
+      "KMO_GUARD_ROLLOUT_WATCH": "true"
+    },
+    "rbacMode": "scoped",
+    "rbac": [
+      {
+        "apiGroups": [
+          "apiextensions.k8s.io"
+        ],
+        "resources": [
+          "customresourcedefinitions"
+        ],
+        "verbs": [
+          "get",
+          "list",
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "argoproj.io"
+        ],
+        "resources": [
+          "rollouts"
+        ],
+        "verbs": [
+          "get",
+          "list",
+          "watch",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "kmo.isntall.net"
+        ],
+        "resources": [
+          "configsyncs",
+          "configstores",
+          "clusterconfigstores"
+        ],
+        "verbs": [
+          "get",
+          "list",
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "configmaps",
+          "secrets"
+        ],
+        "verbs": [
+          "get",
+          "create",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "apps"
+        ],
+        "resources": [
+          "deployments",
+          "statefulsets",
+          "daemonsets"
+        ],
+        "verbs": [
+          "get",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "batch"
+        ],
+        "resources": [
+          "cronjobs"
+        ],
+        "verbs": [
+          "get",
+          "patch"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1149.0",
+    "@kmo/core": "*",
+    "kubernetes-fluent-client": "3.12.3",
+    "pepr": "2.0.3"
+  }
+}

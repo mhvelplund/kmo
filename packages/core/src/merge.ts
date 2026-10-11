@@ -1,11 +1,10 @@
 import type { EnvValues } from "./types";
 
 /**
- * Merges common values with a workload's own values.
- * @param common Values shared by every workload of the store.
- * @param workload Values of one workload; these win.
+ * Merges sets of values into one.
+ * @param layers The sets, least important first; a later set wins over an earlier one.
  * @returns The effective values.
  */
-export function mergeValues(common: EnvValues, workload: EnvValues): EnvValues {
-  return { ...common, ...workload };
+export function mergeValues(...layers: EnvValues[]): EnvValues {
+  return Object.assign({}, ...layers) as EnvValues;
 }
