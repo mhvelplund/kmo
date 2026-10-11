@@ -50,3 +50,10 @@ requires `import type` for types, and `noUncheckedIndexedAccess` is on.
   [Stores in AWS without stored keys](aws-identity.md) describes them.
 - With `KMO_OIDC_ISSUER` set, in `mise.local.toml`, `cluster:up` makes the API server sign its tokens under that
   address.
+
+## The wiki
+
+- The workflow `.github/workflows/wiki.yml` copies the pages of `docs/` to the wiki of the repository on each push to
+  `main` that changes them. The wiki is a copy: change a page in `docs/`, not in the wiki.
+- `mise run docs:wiki -- <directory>` writes the same pages into a directory, to look at them before a push. It deletes
+  each Markdown file already in that directory, and it stops when a link names a page that does not exist.

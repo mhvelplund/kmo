@@ -17,3 +17,5 @@ paths:
 - Two spaces at the end of a line are a forced line break. Prettier, markdownlint and the hooks keep them when text
   follows on the next line. Prettier removes them at the end of a paragraph, where they break nothing.
 - `mise run lint` runs the Prettier check and markdownlint on every Markdown file.
+- The wiki of the repository is a copy of `docs/`, made by `.github/workflows/wiki.yml`. Do not edit the wiki. Links
+  between pages are relative and end in `.md`, with no sub-folder, so that `.github/scripts/wiki.sh` can convert them.

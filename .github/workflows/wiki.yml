@@ -1,0 +1,40 @@
+name: wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - .github/scripts/wiki.sh
+      - .github/workflows/wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: wiki
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+      - uses: jdx/mise-action@v5
+        with:
+          install_args: usage
+      - run: .github/scripts/wiki.sh wiki
+      - name: Push the pages when one changed
+        working-directory: wiki
+        run: |
+          git add --all
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --message "Mirror docs at ${GITHUB_SHA::7}"
+          git push

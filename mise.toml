@@ -119,6 +119,10 @@ run = "test/e2e/run.sh rollout-guard"
 description = "Run the end-to-end suites on the local cluster; name suites after -- to run only those"
 run = "test/e2e/run.sh"
 
+[tasks."docs:wiki"]
+description = "Write the pages of docs/ in the form of a GitHub wiki, e.g. mise run docs:wiki -- <dir>"
+run = ".github/scripts/wiki.sh"
+
 [tasks.demo]
 description = "Change a file in the local store and show the rollout that follows"
 run = "dev/demo.sh"
