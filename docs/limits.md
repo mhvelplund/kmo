@@ -20,7 +20,8 @@ This page says what KMO does not do. [Planned work](planned.md) says what is pla
 - **The receiver matches on bucket name and key only.** Two stores with the same bucket name at different endpoints can
   cause a sync that was not needed. It is harmless.
 - **A common-file change rolls many workloads at once.** Restarts are not spread out.
-- **No TLS and one shared token on the receiver.** Proper authentication is [planned](planned.md#aws-integration).
+- **No TLS and one shared token on the receiver.** HTTPS and proper authentication are
+  [planned](planned.md#aws-integration).
 - **The operator runs in `pepr-system`.** Pepr decides that, and it cannot be changed.
 - **The Rollout guard uses parts of Pepr that are not public.** A Pepr upgrade can break it.
   [Upgrading Pepr](upgrading-pepr.md) is the procedure.
