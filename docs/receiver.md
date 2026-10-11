@@ -59,8 +59,8 @@ One token serves all tenants. That is enough, because the only thing a caller ca
 - It works out the files of each ConfigSync with the same code as the operator, so both always agree.
 - It matches on the bucket name and the key only.
 - It skips a suspended ConfigSync. A resume syncs at once, so nothing is missed.
-- An EventBridge event from a source other than `aws.s3` is answered with 200 and ignored. Other kinds of store will use
-  that later.
+- An EventBridge event from a source other than `aws.s3` is answered with 200 and ignored.
+  [Planned work](planned.md#other-kinds-of-store) gives the reason.
 - One event with several records for the same ConfigSync asks for one sync.
 
 ## Pointing a store at it
@@ -70,8 +70,8 @@ is enabled, its endpoint is `http://kmo-receiver.kmo-system.svc:8080/events/rust
 and the receiver's address is allowed as an outbound target. The seed Job then tells each bucket to send its
 object-created and object-removed events to that webhook.
 
-For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. The rule and the connection are part of the
-AWS integration, which is a later piece of work.
+For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. KMO does not create the rule and the
+connection yet: see [Planned work](planned.md#aws-integration).
 
 ## Running it
 

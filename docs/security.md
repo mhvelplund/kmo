@@ -123,7 +123,7 @@ that the API server sends to the webhook, can answer in place of the operator: a
 refuse them all. The requests hold ConfigSyncs only, and no value from a store.
 
 So do not publish the output of one build, and do not commit it. Build for each cluster, or replace the two Secrets at
-installation. The packaging work must settle this; see [Known limits](limits.md).
+installation. Packaging must settle this: see [Planned work](planned.md#packaging).
 
 ## Read next
 

@@ -1,8 +1,7 @@
 # Installing
 
-KMO has no supported installation for a real cluster yet. A Helm chart, a published image of the receiver and an ArgoCD
-application come with the packaging work, which is planned and not started. Until then, the local environment is the way
-to try KMO: follow [Getting started](getting-started.md).
+KMO has no supported installation for a real cluster yet. [Planned work](planned.md#packaging) says what will bring one.
+Until then, the local environment is the way to try KMO: follow [Getting started](getting-started.md).
 
 This page says what a cluster needs today, for someone who wants to put the parts in place by hand and accepts that the
 steps will change.
@@ -34,10 +33,10 @@ Argo Rollouts is optional. Without it, a Rollout target is reported as a workloa
 ## What is not there yet
 
 - The receiver speaks plain HTTP and knows one shared token. Do not put it on a public address.
-- The path from S3 through EventBridge to the receiver is not set up by KMO. It comes with the AWS integration.
+- The path from S3 through EventBridge to the receiver is not set up by KMO.
 - Stores without stored keys are proven from a cluster outside EKS, and not yet inside EKS.
 
-[Known limits](limits.md) has the full list.
+[Known limits](limits.md) has the full list, and [Planned work](planned.md) says what will change.
 
 ## Read next
 

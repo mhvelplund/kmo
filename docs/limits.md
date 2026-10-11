@@ -1,8 +1,6 @@
-# Known limits and open points
+# Known limits
 
-This page says what KMO does not do, and what the next pieces of work must still prove.
-
-## Known limits
+This page says what KMO does not do. [Planned work](planned.md) says what is planned to change that.
 
 - **A late `TargetsWired` warning.** When someone removes the reference to an output object from a workload that is
   already wired, the warning appears at the next sync, not at once.
@@ -22,7 +20,7 @@ This page says what KMO does not do, and what the next pieces of work must still
 - **The receiver matches on bucket name and key only.** Two stores with the same bucket name at different endpoints can
   cause a sync that was not needed. It is harmless.
 - **A common-file change rolls many workloads at once.** Restarts are not spread out.
-- **No TLS and one shared token on the receiver.** Proper authentication comes with the AWS integration.
+- **No TLS and one shared token on the receiver.** Proper authentication is [planned](planned.md#aws-integration).
 - **The operator runs in `pepr-system`.** Pepr decides that, and it cannot be changed.
 - **The Rollout guard uses parts of Pepr that are not public.** A Pepr upgrade can break it.
   [Upgrading Pepr](upgrading-pepr.md) is the procedure.
@@ -35,27 +33,8 @@ This page says what KMO does not do, and what the next pieces of work must still
 - **A key that is in both the ConfigMap and the Secret** is resolved by the order of the workload's own references. KMO
   does not check for it.
 
-## Open points for the next work
-
-Two more pieces of work are planned, and neither is designed yet: packaging, and the AWS integration.
-
-- **Several copies of the operator in one cluster.** An early experiment suggested that Pepr modules with different
-  identifiers can share a cluster, all in `pepr-system`. That was read from the names that Pepr generates, not from the
-  Pepr documentation. Confirm it in the documentation before anything depends on it.
-- **EventBridge keys.** KMO takes the key of an EventBridge event as it is, on the assumption that it is not
-  URL-encoded. The AWS integration must confirm this against a live event, with a key that holds a space and a plus
-  sign, and add the captured event to `packages/core/test/fixtures/`.
-- **The proof inside EKS of stores without stored keys.** The path is proven from a cluster outside EKS. Packaging
-  brings the first EKS cluster and must repeat `test/e2e/aws/setup.sh` there, without the step that publishes the
-  signing keys, because EKS registers them itself.
-- **Packaging.** The receiver's manifests are in `dev/receiver/` and its image is built for the local registry.
-  Packaging brings the Helm chart, a published image and the ArgoCD application.
-- **The key in the chart that Pepr generates.** `pepr build` puts the private key of the admission webhook in its chart.
-  A chart that is published must not hold it. Packaging must decide how each installation gets its own key, and whether
-  the cluster needs an admission policy for `pepr-system`. See [Security](security.md).
-- **Advisories.** [Known advisories](advisories.md) is reviewed again whenever dependencies change.
-
 ## Read next
 
 - [Installing](installing.md) for what a cluster needs today.
 - [Troubleshooting](troubleshooting.md) for problems that have a fix.
+- [Planned work](planned.md) for what is planned and what it must still prove.

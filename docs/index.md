@@ -23,7 +23,8 @@ In reading order:
 - [Stores in AWS without stored keys](aws-identity.md) explains how a store reaches a bucket as a ServiceAccount.
 - [Security](security.md) says who can change the code that KMO runs, and how to limit that to one group.
 - [Troubleshooting](troubleshooting.md) says what to do when something does not work.
-- [Known limits and open points](limits.md) says what KMO does not do, and what is still to prove.
+- [Known limits](limits.md) says what KMO does not do.
+- [Planned work](planned.md) says what is planned and not built, and what is still to prove.
 - [Installing](installing.md) says what a real cluster needs today.
 
 For people who work on KMO itself:

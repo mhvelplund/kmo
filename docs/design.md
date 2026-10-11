@@ -39,8 +39,7 @@ It does not have:
 - several copies of the operator in one cluster. Tenants are kept apart by stores;
 - the AWS side of a store without stored keys: the registration of a cluster's signing keys, and the IAM roles.
 
-Two pieces of work are planned to close most of these: packaging for a real EKS cluster, and the AWS integration for S3
-and EventBridge. [Known limits and open points](limits.md) lists what they must settle.
+[Planned work](planned.md) says which of these are planned.
 
 ## What KMO guarantees
 
@@ -73,7 +72,7 @@ The end-to-end suites in `test/e2e/` check these on the local cluster.
 | Stores as custom resources, one operator for all                            | Each tenant namespace gets its own bucket and credentials without running a second operator, which Pepr does not readily support. External Secrets Operator and cert-manager separate tenants the same way.                                |
 | A ConfigSync lists its stores in order                                      | One ConfigSync for each service stays the rule, but its values may come from several stores, such as a company store and a team store. Order decides who wins, which a person can read off the resource.                                   |
 | The store owns the layout of its files                                      | The owner of a bucket knows where its files are. A ConfigSync cannot name a key, so a namespace can never ask for the files of another.                                                                                                    |
-| The S3 fields of a store sit in their own block, with the identity          | Other kinds of store are planned. Each kind gets its own block with its own location and its own way to prove who is asking, so a new kind is an addition and not a change.                                                                |
+| The S3 fields of a store sit in their own block, with the identity          | Other kinds of store are [planned](planned.md). Each kind gets its own block with its own location and its own way to prove who is asking, so a new kind is an addition and not a change.                                                  |
 | Outputs marked for Stakater Reloader to ignore                              | Clusters that already run Reloader would otherwise roll a workload a second time for the same change. The mark does nothing where Reloader is absent, so nothing has to be detected.                                                       |
 | A store reaches AWS as a ServiceAccount, never with the operator's identity | No key is stored, and AWS itself refuses a store that names a role its namespace does not own. External Secrets Operator uses the same pattern. Stored keys stay as a second method for stores that cannot do this, such as the local one. |
 | RustFS as the local store                                                   | RustFS is Apache-2.0, needs no registration and uses the standard S3 notification API.                                                                                                                                                     |
@@ -97,8 +96,8 @@ the guide, with every rule.
 
 ## Other kinds of store
 
-A store is a bucket today. Stores for AWS Systems Manager Parameter Store and AWS Secrets Manager are planned and not
-built. Four rules are fixed, so that each new kind is an addition and not a change:
+A store is a bucket today. Other kinds are [planned](planned.md#other-kinds-of-store). Four rules are fixed, so that
+each new kind is an addition and not a change:
 
 - Each kind of store is a block next to `s3`, with its own location, layout and identity. A store has exactly one block.
 - Every kind yields the same four sets of values for a ConfigSync: common and service, config and secrets. Merging,
@@ -182,4 +181,5 @@ Pepr:
 
 - [Architecture](architecture.md) for the parts and the path of one changed file.
 - [ConfigSync](configsync.md), [Stores](stores.md) and [The receiver](receiver.md) for the rules.
-- [Known limits and open points](limits.md) for what is not built and what is still to prove.
+- [Known limits](limits.md) for what KMO does not do.
+- [Planned work](planned.md) for what is not built and what is still to prove.

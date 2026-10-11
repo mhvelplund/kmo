@@ -71,19 +71,19 @@ An npm workspace of source-only TypeScript packages: nothing is compiled, and co
 
 Read the file that fits before you plan or change that part. Do not read them all at the start.
 
-| When                                             | Read                                                        |
-| ------------------------------------------------ | ----------------------------------------------------------- |
-| A design question, or a new piece of work        | `docs/design.md`, then `docs/limits.md` for the open points |
-| The rules of a resource or of the receiver       | `docs/configsync.md`, `docs/stores.md`, `docs/receiver.md`  |
-| Running a task, the cluster or the proof on AWS  | `docs/commands.md`                                          |
-| Work on `packages/core`                          | `.claude/rules/core.md`                                     |
-| Work on `packages/operator`, or anything on Pepr | `.claude/rules/operator.md`, and `docs/upgrading-pepr.md`   |
-| Work on `packages/receiver`                      | `.claude/rules/receiver.md`                                 |
-| Work on `test/e2e/`                              | `.claude/rules/e2e.md`                                      |
-| Work on `dev/` or `crds/`                        | `.claude/rules/dev.md`                                      |
-| Writing a shell script                           | `.claude/rules/shell.md`                                    |
-| Writing documentation                            | `.claude/rules/docs.md`                                     |
-| A person's own settings, such as the AWS region  | `CLAUDE.local.md`, which is not committed                   |
+| When                                             | Read                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| A design question, or a new piece of work        | `docs/design.md`, then `docs/planned.md` for the open points |
+| The rules of a resource or of the receiver       | `docs/configsync.md`, `docs/stores.md`, `docs/receiver.md`   |
+| Running a task, the cluster or the proof on AWS  | `docs/commands.md`                                           |
+| Work on `packages/core`                          | `.claude/rules/core.md`                                      |
+| Work on `packages/operator`, or anything on Pepr | `.claude/rules/operator.md`, and `docs/upgrading-pepr.md`    |
+| Work on `packages/receiver`                      | `.claude/rules/receiver.md`                                  |
+| Work on `test/e2e/`                              | `.claude/rules/e2e.md`                                       |
+| Work on `dev/` or `crds/`                        | `.claude/rules/dev.md`                                       |
+| Writing a shell script                           | `.claude/rules/shell.md`                                     |
+| Writing documentation                            | `.claude/rules/docs.md`                                      |
+| A person's own settings, such as the AWS region  | `CLAUDE.local.md`, which is not committed                    |
 
 Each file in `.claude/rules/` names the paths it is for, so it is also loaded when a file under those paths is read.
 

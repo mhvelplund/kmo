@@ -102,12 +102,6 @@ S3 has two ways to put the bucket name in the address of a request. `VirtualHost
 name. AWS expects that, and it needs a DNS name for every bucket. `Path` puts it in the path, after one host name. A
 store that you host yourself, such as RustFS, has one host name and no DNS record for each bucket, so it needs `Path`.
 
-## Other kinds of store
-
-A store is a bucket today. Stores for AWS Systems Manager Parameter Store and AWS Secrets Manager are planned and not
-built. Each will be a block next to `s3`. The design document has the four rules that are fixed for them:
-[Other kinds of store](design.md#other-kinds-of-store).
-
 ## Read next
 
 - [Tenants](tenants.md) for how to give a team its own store.
