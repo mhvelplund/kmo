@@ -13,8 +13,8 @@ is never a change of one number.
    reminder to do the next steps.
 3. Look at the other tests in `packages/operator/test/pepr-contract.test.ts`. Each states one thing the shim relies on.
    If one fails, the shim must be changed before you continue.
-4. Run `mise run operator:deploy`, then `mise run check:rollout-guard`. The script removes and reinstalls Argo Rollouts
-   on the local cluster and takes about seven minutes.
+4. Run `mise run test:e2e -- rollout-guard`. The suite installs the operator, then removes and reinstalls Argo Rollouts
+   on the local cluster, and takes about seven minutes. `mise run check:rollout-guard` is the same thing.
 5. Only when the contract tests and all four cluster checks pass, change the versions in the `VERIFIED` constant of the
    contract test file.
 

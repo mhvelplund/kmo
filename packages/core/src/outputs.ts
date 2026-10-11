@@ -1,6 +1,6 @@
 import type { ResolvedConfigSync } from "./defaults";
 import type { Outputs } from "./render";
-import type { EnvValues } from "./types";
+import type { EnvValues, OutputKind } from "./types";
 
 /** Label that marks an object as written by KMO. */
 export const MANAGED_BY_LABEL = "app.kubernetes.io/managed-by";
@@ -26,7 +26,7 @@ export interface OutputObject {
   /** Both kinds are in the core API. */
   apiVersion: "v1";
   /** Which of the two objects this is. */
-  kind: "ConfigMap" | "Secret";
+  kind: OutputKind;
   /** Set on a Secret only. */
   type?: "Opaque";
   /** Name, namespace, KMO's label and annotation, and the owner. */

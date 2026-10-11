@@ -6,6 +6,7 @@ is a better way, and KMO supports it.
 
 **Status.** The path is proven from a cluster outside EKS: the local cluster read env files from a private S3 bucket
 with a role and no stored key. It is not proven inside EKS yet. The operator's code is the same there.
+[Known limits and open points](limits.md) records what that proof must do.
 
 ## How it works
 

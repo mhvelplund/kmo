@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kmo-receiver
+  namespace: kmo-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kmo-receiver
+rules:
+  - apiGroups: [kmo.isntall.net]
+    resources: [configsyncs]
+    verbs: [get, list, watch, patch]
+  - apiGroups: [kmo.isntall.net]
+    resources: [configstores, clusterconfigstores]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kmo-receiver
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kmo-receiver
+subjects:
+  - kind: ServiceAccount
+    name: kmo-receiver
+    namespace: kmo-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kmo-receiver-token
+  namespace: kmo-system
+stringData:
+  token: kmo-local-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kmo-receiver
+  namespace: kmo-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kmo-receiver
+  template:
+    metadata:
+      labels:
+        app: kmo-receiver
+    spec:
+      serviceAccountName: kmo-receiver
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: receiver
+          image: kmo-registry.localhost:5111/kmo-receiver:dev
+          imagePullPolicy: Always
+          env:
+            - name: KMO_RECEIVER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kmo-receiver-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kmo-receiver
+  namespace: kmo-system
+spec:
+  selector:
+    app: kmo-receiver
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

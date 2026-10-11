@@ -5,21 +5,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## State of the repository
 
 The design spec, `docs/superpowers/specs/2026-10-10-kmo-operator-core-design.md`, is the source of truth for every
-design question; read it before proposing or building anything. The foundations plan,
-`docs/superpowers/plans/2026-10-10-kmo-foundations.md`, is complete: the tooling, the local environment, the spike and
-the core logic exist. The operator plan, `docs/superpowers/plans/2026-10-11-kmo-operator.md` (spec steps 5 to 11), is
-complete, all eleven tasks. The operator deploys, the guarded Rollout watch is proven on the cluster, the three custom
-resource definitions are installed, and a reconcile reads the source files of each ConfigSync, from every store it
-lists, writes one ConfigMap and one Secret for each, and stamps the config hash on the targets, so they roll when their
-values change. It reports the result on the ConfigSync, as status with four conditions and as Events. A timer and
-changes to outputs, workloads and stores ask for a sync, a failed sync is tried again once a minute, and `suspend` makes
-the operator leave a ConfigSync alone. Admission refuses a ConfigSync that shares a target or an output name with
-another. Each store reports a `Ready` condition from a check of its bucket, and the local environment has two tenants. A
-store can name a ServiceAccount in place of a credentials Secret; the operator exchanges its token for short-lived AWS
-keys. That path is proven from the local cluster against a real AWS account, and not yet inside EKS. AWS refuses a
-ServiceAccount that the role does not trust, which is also proven. The AWS resources of that proof are removed. The next
-plan, for the receiver and the finish (spec steps 12 and 13), is not written yet. The receiver does not exist, so a
-changed file in the store is picked up only by the refresh interval or a request by hand.
+design question; read it before proposing or building anything. Its three plans are complete: the foundations plan,
+`docs/superpowers/plans/2026-10-10-kmo-foundations.md` (spec steps 1 to 4), the operator plan,
+`docs/superpowers/plans/2026-10-11-kmo-operator.md` (steps 5 to 11), and the receiver plan,
+`docs/superpowers/plans/2026-10-11-kmo-receiver-and-finish.md` (steps 12 and 13). The first spec is finished.
+
+The operator deploys, the guarded Rollout watch is proven on the cluster, and the three custom resource definitions are
+installed. A reconcile reads the source files of each ConfigSync, from every store it lists, writes one ConfigMap and
+one Secret for each, and stamps the config hash on the targets, so they roll when their values change. It reports the
+result on the ConfigSync, as status with four conditions and as Events. A timer and changes to outputs, workloads and
+stores ask for a sync, a failed sync is tried again once a minute, and `suspend` makes the operator leave a ConfigSync
+alone. Admission refuses a ConfigSync that shares a target or an output name with another. Each store reports a `Ready`
+condition from a check of its bucket, and the local environment has two tenants. A store can name a ServiceAccount in
+place of a credentials Secret; the operator exchanges its token for short-lived AWS keys. That path is proven from the
+local cluster against a real AWS account, and not yet inside EKS. The AWS resources of that proof are removed.
+
+The receiver runs in `kmo-system`. RustFS sends it an event for each changed file, and it asks for a sync of every
+ConfigSync that reads the file, so a changed file reaches the pods in seconds with no step by hand.
+
+The next work is two more specs, packaging and AWS integration. Neither exists yet, and each needs a spec before a plan.
+`docs/limits.md` holds the known limits and the open points that those specs must close.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
 code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, label
@@ -41,7 +46,8 @@ Two components, deliberately split:
 
 - **Receiver.** A stateless HTTP service that turns a store change event (RustFS S3 notification or EventBridge) into a
   `kmo.isntall.net/sync-requested-at` annotation on each affected ConfigSync. It never reads the store and cannot read
-  Secrets.
+  Secrets. It answers 200 only when every request for a sync was written, 500 when one failed and 503 until its lists of
+  the cluster are filled, so that the sender sends the event again.
 - **Operator.** A Pepr module (TypeScript) that reconciles each ConfigSync. It is the only component holding store
   credentials and the only writer of managed objects.
 
@@ -79,8 +85,13 @@ Invariants that span the design and are easy to break:
   `serviceFolder` lacks `{namespace}`.
 - Conflicting ConfigSyncs (shared target or output name) are rejected at admission; suspended resources keep their
   claims.
+- A file over 1 MiB, or merged values over 1 MiB for one of the two objects, is the failure `OutputTooLarge`. Values are
+  never split over several objects.
 - Outputs carry `reloader.stakater.com/ignore: "true"` so Stakater Reloader does not roll workloads a second time.
-- The receiver and operator must resolve stores and default keys with the same code, so they always agree.
+- The receiver and operator must resolve stores and default keys with the same code, so they always agree. Both build
+  the object of a sync request with `syncRequestApply` from core.
+- The receiver does not import `pepr` or `kubernetes-fluent-client`, has no permission on Secrets and no code that reads
+  the store. A message in its log or in an HTTP answer never holds the token or a value from a file.
 
 ## Layout
 
@@ -103,17 +114,31 @@ binding, `src/kinds.ts` the client kinds and `src/guarded-kind.ts` the shim for 
 `src/store-status.ts` the `Ready` condition of a store, `src/reconcile.ts` one reconcile from start to finish
 `src/report.ts` the status and Events it leaves on the ConfigSync, and `src/triggers.ts` the handlers that ask for a
 sync, with `src/generation-gate.ts` to tell a spec change from any other update. Its `package.json` holds the Pepr
-settings and the hand-written RBAC rules. `test/e2e/` holds scripts that check the operator on the local cluster.
+settings and the hand-written RBAC rules. `packages/receiver` is the HTTP service, `@kmo/receiver`, on `node:http` and
+`@kubernetes/client-node`: `src/handler.ts` turns one request into one answer and needs no socket and no cluster,
+`src/server.ts` puts it on a socket with a limit on the body, `src/cluster.ts` holds the three watched lists (informers)
+and the sync request, `src/log.ts` writes one JSON line for each message, and `src/main.ts` is the entry point.
+`npm run build --workspace @kmo/receiver` bundles it with esbuild into `dist/receiver.cjs`, and the `Dockerfile` copies
+only that bundle.
 
 `crds/` holds the definitions of ConfigSync, ConfigStore and ClusterConfigStore. The `deploy` and `operator:deploy`
 tasks apply them first, so the kinds exist before anything watches them. `dev/kmo/` holds the `kmo-system` namespace and
 the local cluster-wide store `default`; `dev/workloads/configsyncs.yaml` holds one ConfigSync for each sample workload;
 `dev/tenants/` holds the trusted tenant `payments`, with its own store, and the untrusted tenant `partners`, on a
-cluster-wide store. `test/e2e/aws/` holds the scripts for the proof of stores without stored keys.
+cluster-wide store. `dev/receiver/` holds the receiver's manifests, until the packaging spec brings a chart, and
+`dev/demo.sh` is the demo.
 
-Still to come: `packages/receiver` (the HTTP service). The operator and receiver are to be thin shells around core.
-`dev/` holds the local environment. The operator writes the `<name>-kmo` ConfigMaps and Secrets of the sample workloads,
-so their pods start only after `mise run operator:deploy`.
+`test/e2e/` holds the end-to-end suites, in Bash: `lib.sh` is the helpers that every suite sources, `run.sh` sets the
+environment up once and runs the suites, and the suites are `smoke.sh`, `events.sh`, `kinds.sh`, `failures.sh`,
+`tenants.sh` and `rollout-guard.sh`. Each suite works in a namespace of its own and removes it at the end.
+`test/e2e/aws/` holds the scripts for the proof of stores without stored keys.
+
+The operator and receiver are thin shells around core. `dev/` holds the local environment. The operator writes the
+`<name>-kmo` ConfigMaps and Secrets of the sample workloads, so their pods start only after `mise run operator:deploy`.
+
+`docs/` holds the documentation: `index.md`, `getting-started.md`, `architecture.md`, `concepts.md`, `configsync.md`,
+`stores.md`, `receiver.md`, `tenants.md`, `security.md`, `aws-identity.md`, `troubleshooting.md`, `limits.md`,
+`installing.md`, `upgrading-pepr.md` and `advisories.md`.
 
 One root `tsconfig.json` checks every package and emits nothing. Imports are extensionless, `verbatimModuleSyntax`
 requires `import type` for types, and `noUncheckedIndexedAccess` is on.
@@ -152,52 +177,60 @@ planning operator work. The consequences that are easiest to trip over:
 - A trigger check that was put off must read the workload again. The object the watch delivered is older than the
   reconcile it waited for.
 - Use scoped RBAC with hand-written rules; Pepr's default grants cluster admin.
+- RustFS does not deliver every event at once: one can arrive about five seconds after its upload. After an answer of
+  500 it sends the event again every five seconds, and it keeps events in a queue while the receiver is down. An
+  end-to-end check that counts reconciles must first wait until the events of its own uploads are past.
+- Docker on the build computer cannot resolve `kmo-registry.localhost`, so `receiver:deploy` pushes to `localhost:5111`.
+  Inside the cluster the same registry is named `kmo-registry.localhost:5111`, which is the name in the manifest.
 
 ## Commands
 
 Mise pins the tools and defines the tasks. Commands assume Mise is activated; otherwise prefix them with `mise x --`.
 
 - `mise run setup` installs the npm dependencies and the Git hooks.
-- `mise run lint` runs ESLint, the Prettier check, markdownlint and the TypeScript type check (`npm run typecheck`).
-- `npm run format` rewrites files with Prettier (line length 120). Run it before committing; the pre-commit hook only
-  checks. `packages/core/test/fixtures/` is excluded because the payloads are real captures, and
-  `docs/superpowers/plans/` is excluded from both Prettier and markdownlint.
+- `mise run lint` runs ESLint, the Prettier check, markdownlint, the TypeScript type check (`npm run typecheck`),
+  ShellCheck and the shfmt check.
+- `mise run format` rewrites files with Prettier (line length 120) and the shell scripts with shfmt. Run it before
+  committing; the pre-commit hooks only check. `packages/core/test/fixtures/` is excluded because the payloads are real
+  captures, and `docs/superpowers/plans/` is excluded from both Prettier and markdownlint.
 - `mise run test` runs the unit tests with Vitest. One file: `npx vitest run packages/core/test/dotenv.test.ts`. One
   test: add `-t "part of its name"`.
 - `mise run operator:deploy` builds the operator and installs it into the cluster; `mise run operator:logs` shows the
   watcher log.
-- `mise run test:e2e` runs the end-to-end smoke test, `test/e2e/smoke.sh`, in about three minutes. It needs Docker,
-  creates the cluster and installs the local environment when they are missing, always installs the operator from the
-  working tree, and uses its own namespace `kmo-smoke`. Run it at the end of every task that changes the operator, and
-  add a check to it for each new behavior that can be seen on the cluster.
+- `mise run receiver:deploy` bundles the receiver, pushes its image to the cluster's registry and installs it;
+  `mise run receiver:logs` shows its log.
+- `mise run test:e2e` runs the six end-to-end suites through `test/e2e/run.sh`, in about twelve minutes. Name suites
+  after `--` to run only those: `mise run test:e2e -- smoke` takes about two minutes. It needs Docker and `curl`,
+  creates the cluster and installs the local environment when they are missing, and always installs the operator and the
+  receiver from the working tree. Run the smoke suite at the end of every task that changes the operator or the
+  receiver, and the full run before a commit. Add a check to the suite that fits for each new behavior that can be seen
+  on the cluster.
+- `mise run demo` changes one value in the local store and shows each step up to the new pods.
 - `mise run aws:issuer`, `mise run aws:setup` and `mise run aws:teardown` run the proof of stores without stored keys
   against a real AWS account. They create and delete AWS resources, so they need a go-ahead in the session each time.
   `docs/aws-identity.md` describes them. With `KMO_OIDC_ISSUER` set, in `mise.local.toml`, `cluster:up` makes the API
   server sign its tokens under that address.
-- `mise run check:rollout-guard` proves the guarded Rollout watch. It removes and reinstalls Argo Rollouts on the local
-  cluster and takes about seven minutes.
+- `mise run check:rollout-guard` is a shortcut for `mise run test:e2e -- rollout-guard`, which proves the guarded
+  Rollout watch. It removes and reinstalls Argo Rollouts on the local cluster and takes about seven minutes.
 - `mise run cluster:up` and `mise run cluster:down` create and delete the local k3d cluster. Its kubeconfig is
   `.kube/config` inside the repository.
 - `mise run deploy` installs Argo Rollouts, RustFS, the seed Job and the sample workloads from `dev/`.
 - `mise run store -- <aws args>` runs the AWS CLI against the local RustFS, for example `mise run store -- s3 ls`.
 
-Pre-commit runs ESLint, the Prettier check, markdownlint, the TypeScript type check and gitleaks. Commit directly to
-`main`; do not create branches. Leave finished work uncommitted for review: commit only when asked, never push, and do
-not start the next step unasked. Use conventional commit messages with the types `feat`, `fix` and `chore`, for example
-`feat: add the env file parser`.
+Pre-commit runs ESLint, the Prettier check, markdownlint, the TypeScript type check, ShellCheck, the shfmt check and
+gitleaks. Commit directly to `main`; do not create branches. Leave finished work uncommitted for review: commit only
+when asked, never push, and do not start the next step unasked. Use conventional commit messages with the types `feat`,
+`fix` and `chore`, for example `feat: add the env file parser`.
 
-The remaining planned task, `demo`, does not exist yet. The local environment is a k3d cluster named `kmo` with Argo
-Rollouts installed, RustFS in the `kmo-dev` namespace holding the bucket `kmo-config`, and the sample workloads in
-`shop`. `kubectl` reaches this cluster only when Mise is active, because Mise sets `KUBECONFIG`.
+The local environment is a k3d cluster named `kmo` with Argo Rollouts installed, RustFS in the `kmo-dev` namespace
+holding the bucket `kmo-config`, and the sample workloads in `shop`. `kubectl` reaches this cluster only when Mise is
+active, because Mise sets `KUBECONFIG`.
 
 ## How the build proceeds
 
-The spec lists thirteen ordered steps. Steps 1 to 4 (tooling, the local cluster, the spike and the core logic) are done,
-and so are the two operator tasks that come before step 5, step 5, the custom resources, step 6, syncing, step 7,
-rolling updates, step 8, reporting, step 9, staying in step, step 10, guarding, and step 11, tenants. The next are step
-12, the receiver, and step 13, the finish, which need a new plan first. Work one step at a time: explain beforehand what
-is being built and which Kubernetes idea it introduces, finish with something observable, then pause for questions. Do
-not batch several steps into one change. Implementation is test-first.
+The spec lists thirteen ordered steps, and all thirteen are done. New work starts with a spec, then a plan. Work one
+step at a time: explain beforehand what is being built and which Kubernetes idea it introduces, finish with something
+observable, then pause for questions. Do not batch several steps into one change. Implementation is test-first.
 
 ## Conventions
 
@@ -215,4 +248,10 @@ not batch several steps into one change. Implementation is test-first.
 - **Nothing about one person's computer in committed files.** No absolute local paths (such as a home directory), user
   names, AWS account IDs, profiles or regions. Write paths relative to the repository root. A person's own settings
   belong in `CLAUDE.local.md`, which is not committed; read it for values such as the AWS region.
+- **Shell scripts.** The shebang is `#!/usr/bin/env -S usage bash`, so `usage` reads the arguments and bash runs the
+  script. The description is in `#USAGE` lines at the head: `about` for `-h`, and `long_about` when `--help` must say
+  more. A script without a `#USAGE` line does not start. Declare each argument and flag there and read it from its
+  `usage_<name>` variable. `.shellcheckrc` and `.editorconfig` hold the settings of ShellCheck and shfmt. A file that is
+  only sourced, as `lib.sh` is, has no shebang. A script runs from any directory: it does not change directory, and it
+  builds each path from its own location, `$(dirname "${BASH_SOURCE[0]}")`.
 - **KISS.** Use ASD-STE100 Simplified Technical English to explain things.

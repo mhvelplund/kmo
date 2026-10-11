@@ -1,8 +1,12 @@
-#!/usr/bin/env bash
-# Proves the guarded Rollout watch on the local cluster. Run it again after every Pepr upgrade.
+#!/usr/bin/env -S usage bash
+#USAGE about "Proves the guarded Rollout watch on the local cluster"
+#USAGE long_about #"""
+#USAGE Proves the guarded Rollout watch on the local cluster. Run it again after
+#USAGE every Pepr upgrade.
+#USAGE """#
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+ROOT=$(dirname "${BASH_SOURCE[0]}")/../..
 NS=pepr-system
 WATCHER=deployment/pepr-kmo-watcher
 
@@ -16,16 +20,19 @@ restart_watcher() {
   kubectl rollout status -n "$NS" "$WATCHER" --timeout=180s >/dev/null
 }
 remove_rollouts() {
-  kubectl delete -k dev/argo-rollouts --ignore-not-found --wait=true >/dev/null
+  kubectl delete -k "$ROOT/dev/argo-rollouts" --ignore-not-found --wait=true >/dev/null
   kubectl wait --for=delete crd/rollouts.argoproj.io --timeout=120s >/dev/null 2>&1 || true
 }
 install_rollouts() {
-  kubectl apply --server-side -k dev/argo-rollouts >/dev/null
+  kubectl apply --server-side -k "$ROOT/dev/argo-rollouts" >/dev/null
   kubectl wait --for=condition=Established crd/rollouts.argoproj.io --timeout=60s >/dev/null
-  kubectl apply -f dev/workloads/checkout.yaml >/dev/null
+  kubectl apply -f "$ROOT/dev/workloads/checkout.yaml" >/dev/null
 }
 pass() { echo "PASS  $1"; }
-fail() { echo "FAIL  $1"; FAILED=1; }
+fail() {
+  echo "FAIL  $1"
+  FAILED=1
+}
 check() { if eval "$2"; then pass "$1"; else fail "$1"; fi; }
 FAILED=0
 
@@ -64,4 +71,7 @@ kubectl set env -n "$NS" "$WATCHER" KMO_GUARD_ROLLOUT_WATCH=true >/dev/null
 install_rollouts
 kubectl rollout status -n "$NS" "$WATCHER" --timeout=180s >/dev/null
 
-[ "$FAILED" = "0" ] && echo "All checks passed." || { echo "At least one check failed."; exit 1; }
+if [ "$FAILED" = "0" ]; then echo "All checks passed."; else
+  echo "At least one check failed."
+  exit 1
+fi

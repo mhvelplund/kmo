@@ -382,6 +382,8 @@ Consequences of this design:
 - The same store is listed twice.
 - A file cannot be parsed.
 - An object with the output name already exists without KMO's label. KMO never adopts or overwrites it.
+- A file is larger than 1 MiB, or the merged values of the ConfigMap or of the Secret are. Kubernetes stores no more
+  than that in one object. The values are not split over several objects.
 
 A failure on any one file or any one store stops the whole reconcile, so a partial merge is never written.
 

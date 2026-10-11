@@ -1,12 +1,12 @@
 import {
   CONFIG_HASH_ANNOTATION,
-  SYNC_REQUESTED_ANNOTATION,
   isSuspended,
   needsReconcile,
   outputsDrifted,
   podTemplate,
   resolveConfigSync,
   syncDue,
+  syncRequestApply,
   syncsTargeting,
   syncsUsingStore,
   targetNeedsSync,
@@ -59,17 +59,9 @@ const RETRIES = 6;
  * @param attempt How many times the request was sent already.
  */
 export async function requestSync(sync: ConfigSync, why: string, attempt = 0): Promise<void> {
-  const { name, namespace, uid } = sync.metadata;
+  const { name, namespace } = sync.metadata;
   try {
-    // The uid makes the API server refuse the apply when the resource is gone, so it is never created again.
-    await K8s(ConfigSyncKind).Apply(
-      {
-        apiVersion: "kmo.isntall.net/v1alpha1",
-        kind: "ConfigSync",
-        metadata: { name, namespace, uid, annotations: { [SYNC_REQUESTED_ANNOTATION]: new Date().toISOString() } },
-      },
-      { force: true },
-    );
+    await K8s(ConfigSyncKind).Apply(syncRequestApply(sync, new Date()), { force: true });
   } catch (error) {
     const status = (error as { status?: number }).status;
     if (status === 404 || status === 409) return;

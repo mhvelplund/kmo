@@ -1,38 +1,21 @@
-#!/usr/bin/env bash
-# End-to-end smoke test of the operator on the local cluster. It needs Docker. It creates the cluster and installs
-# the local environment when they are missing, and always installs the operator from the working tree.
-# It uses its own namespace, store and files, and removes them when it ends.
+#!/usr/bin/env -S usage bash
+#USAGE about "End-to-end smoke test of the operator and the receiver on the local cluster"
+#USAGE long_about #"""
+#USAGE End-to-end smoke test of the operator and the receiver on the local cluster.
+#USAGE It needs Docker. It creates the cluster and installs the local environment
+#USAGE when they are missing, and always installs the operator and the receiver from
+#USAGE the working tree. It uses its own namespace, store and files, and removes them
+#USAGE when it ends.
+#USAGE """#
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
-CLUSTER=kmo
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 NS=kmo-smoke
 OVERLAY=smoke-overlay
 LATE=smoke-late
 CLOSED=smoke-closed
-BUCKET=kmo-config
-WATCHER=deployment/pepr-kmo-watcher
 HASH='{.spec.template.metadata.annotations.kmo\.isntall\.net/config-hash}'
-FAILED=0
 
-pass() { echo "PASS  $1"; }
-fail() { echo "FAIL  $1"; FAILED=1; }
-check() { if eval "$2"; then pass "$1"; else fail "$1"; fi; }
-# wait_for <description> <condition> [seconds]: passes as soon as the condition holds.
-wait_for() {
-  local end=$((SECONDS + ${3:-60}))
-  until eval "$2"; do
-    if [ "$SECONDS" -ge "$end" ]; then fail "$1"; return; fi
-    sleep 2
-  done
-  pass "$1"
-}
-
-store() {
-  AWS_CONFIG_FILE=dev/aws-config AWS_PROFILE=default AWS_ACCESS_KEY_ID=kmoadmin \
-    AWS_SECRET_ACCESS_KEY=kmo-local-secret aws "$@"
-}
-put() { printf '%b' "$2" | store s3 cp - "s3://$BUCKET/$1" >/dev/null; }
 request_sync() {
   kubectl annotate csync app -n "$NS" kmo.isntall.net/sync-requested-at="$(date -u +%FT%T.%3NZ)" --overwrite >/dev/null
 }
@@ -61,6 +44,10 @@ has_event() {
 reconciles() {
   kubectl logs -n pepr-system "$WATCHER" --since=10m | grep "KMO reconciled" | grep -c "\"namespace\":\"$NS\"" || true
 }
+# receiver_saw <key> <time>: true when the receiver logged an event for the file after that time.
+receiver_saw() {
+  kubectl logs -n kmo-system deployment/kmo-receiver --since-time="$2" 2>/dev/null | grep -q "\"$BUCKET/$1\""
+}
 store_ready() {
   kubectl get clusterconfigstore "$1" -o jsonpath="{.status.conditions[?(@.type==\"Ready\")].$2}" 2>/dev/null || true
 }
@@ -71,46 +58,24 @@ refused() {
     "$NS" "$1" | kubectl apply -f - 2>&1) && return 1
   [[ "$output" == *"$2"* ]]
 }
-watcher_restarts() {
-  kubectl get pods -n pepr-system -l pepr.dev/controller=watcher \
-    -o jsonpath='{range .items[*]}{.status.containerStatuses[0].restartCount}{"\n"}{end}' | sort -n | tail -1
-}
-
 cleanup() {
   kubectl delete namespace "$NS" --ignore-not-found --wait=false >/dev/null 2>&1 || true
   kubectl delete clusterconfigstore "$OVERLAY" "$LATE" "$CLOSED" --ignore-not-found >/dev/null 2>&1 || true
   store s3 rm --recursive "s3://$BUCKET/$NS/" >/dev/null 2>&1 || true
   store s3 rm --recursive "s3://$BUCKET/$OVERLAY/" >/dev/null 2>&1 || true
 }
-# quietly <command...>: runs a setup command, and shows its output only when it fails.
-quietly() {
-  local output
-  output=$("$@" 2>&1) || { echo "$output" | tail -30; echo "Setup failed: $*"; exit 1; }
-}
 
-timeout 10 docker info >/dev/null 2>&1 || { echo "Docker is not available. Start Docker and run the test again."; exit 1; }
-
-if ! k3d cluster list "$CLUSTER" >/dev/null 2>&1; then
-  echo "Setup: the cluster $CLUSTER is missing; creating it"
-  quietly mise run cluster:up
-elif ! kubectl get nodes --request-timeout=10s >/dev/null 2>&1; then
-  echo "Setup: the cluster $CLUSTER is stopped; starting it"
-  quietly k3d cluster start "$CLUSTER"
-  quietly kubectl wait --for=condition=Ready nodes --all --timeout=120s
-fi
-if ! kubectl get clusterconfigstore default >/dev/null 2>&1; then
-  echo "Setup: installing the local environment"
-  quietly mise run deploy
-fi
-echo "Setup: installing the operator from the working tree"
-quietly mise run operator:deploy
+ensure_environment
 trap cleanup EXIT
 cleanup
 kubectl wait --for=delete "namespace/$NS" --timeout=60s >/dev/null 2>&1 || true
 
 echo "Setup: a service with its files, its ConfigSync and its Deployment"
+STARTED=$(date -u +%FT%TZ)
 put "$NS/app/config.env" 'GREETING=one\nLOG_LEVEL=debug\n'
 put "$NS/app/secrets.env" 'PASSWORD=pässwörd\n'
+# A late event of these uploads would start a reconcile that Check 3 counts.
+wait_for "the receiver saw the uploads" 'receiver_saw "$NS/app/secrets.env" "$STARTED"' 30
 kubectl apply -f - >/dev/null <<EOF
 apiVersion: v1
 kind: Namespace
@@ -141,7 +106,10 @@ EOF
 
 echo "Check 1: the operator writes the ConfigMap and the Secret"
 wait_for "the ConfigMap holds the service's value" '[ "$(config GREETING)" = "one" ]'
-[ "$FAILED" = "0" ] || { echo "The operator writes nothing, so the other checks cannot pass. Stopping."; exit 1; }
+[ "$FAILED" = "0" ] || {
+  echo "The operator writes nothing, so the other checks cannot pass. Stopping."
+  exit 1
+}
 check "the common values are merged in" '[ -n "$(config REGION)" ]'
 check "the Secret holds the secret value, non-ASCII characters included" '[ "$(secret PASSWORD)" = "pässwörd" ]'
 check "the ConfigMap carries the label of KMO" \
@@ -154,7 +122,10 @@ check "the ConfigMap is owned by its ConfigSync" \
 echo "Check 2: the config hash is on the pod template, and the pod has the values"
 wait_for "the Deployment carries a config hash" '[ "$(stamp | wc -c)" = "64" ]'
 wait_for "the pod runs with the value" '[ "$(pod_env GREETING)" = "one" ]' 120
-[ "$FAILED" = "0" ] || { echo "The workload did not get its values, so the other checks cannot pass. Stopping."; exit 1; }
+[ "$FAILED" = "0" ] || {
+  echo "The workload did not get its values, so the other checks cannot pass. Stopping."
+  exit 1
+}
 
 echo "Check 3: the ConfigSync reports what happened"
 wait_for "the ConfigSync is ready" '[ "$(condition app Ready status)" = "True" ]'
@@ -167,22 +138,22 @@ COUNT=$(reconciles)
 sleep 10
 check "the status update started no further reconcile" '[ "$(reconciles)" = "$COUNT" ]'
 
-echo "Check 4: a changed value rolls the workload"
+echo "Check 4: a changed file rolls the workload, with no request by hand"
 BEFORE=$(stamp)
 put "$NS/app/config.env" 'GREETING=two\nLOG_LEVEL=debug\n'
-request_sync
 wait_for "the hash changed" '[ -n "$(stamp)" ] && [ "$(stamp)" != "$BEFORE" ]'
 wait_for "the new pod runs with the new value" '[ "$(pod_env GREETING)" = "two" ]' 120
 
 echo "Check 5: a changed file with the same effective values replaces no pod"
 wait_for "the rollout is finished" one_pod 120
-BEFORE=$(stamp); PODS=$(pods); COUNT=$(reconciles)
+BEFORE=$(stamp)
+PODS=$(pods)
+COUNT=$(reconciles)
 put "$NS/app/config.env" '# a comment only\nGREETING=two\nLOG_LEVEL=debug\n'
-request_sync
 sleep 10
 check "the hash is the same" '[ "$(stamp)" = "$BEFORE" ]'
 check "no pod was replaced" '[ "$(pods)" = "$PODS" ]'
-check "one request started one reconcile" '[ "$(reconciles)" = "$((COUNT + 1))" ]'
+check "one changed file started one reconcile" '[ "$(reconciles)" = "$((COUNT + 1))" ]'
 
 echo "Check 6: a hand edit to an output is undone at once, with no request"
 kubectl patch configmap app-kmo -n "$NS" --type merge -p '{"data":{"GREETING":"edited","EXTRA":"by hand"}}' >/dev/null
@@ -221,16 +192,17 @@ check "and its service value still wins" '[ "$(config GREETING)" = "overlay" ]'
 
 echo "Check 8: a failure writes nothing, and is reported"
 wait_for "the workload rolled to the new values" 'rolled_from "$BEFORE"' 120
-DATA=$(config_data); BEFORE=$(stamp)
+DATA=$(config_data)
+BEFORE=$(stamp)
 put "$NS/app/config.env" 'this line is not an assignment\n'
-request_sync
 wait_for "the ConfigSync is not ready, with the reason" '[ "$(condition app Ready reason)" = "SourceUnparsable" ]'
 check "the message names the file and the line" '[[ "$(condition app Ready message)" == *"config, line 1:"* ]]'
 check "a Warning Event is recorded" 'has_event app Warning SourceUnparsable'
 check "an unparsable file leaves the ConfigMap as it was" '[ "$(config_data)" = "$DATA" ]'
-put "$NS/app/config.env" 'GREETING=two\nLOG_LEVEL=changed\n'
 set_sources "[$FIRST,$SECOND,\"common\":false},{\"storeRef\":{\"kind\":\"ClusterConfigStore\",\"name\":\"$LATE\"}}]"
 wait_for "a missing store is the new reason" '[ "$(condition app Ready reason)" = "StoreNotFound" ]'
+put "$NS/app/config.env" 'GREETING=two\nLOG_LEVEL=changed\n'
+sleep 8
 check "a missing store leaves the ConfigMap as it was, also for the stores that exist" '[ "$(config_data)" = "$DATA" ]'
 check "the hash is the same" '[ "$(stamp)" = "$BEFORE" ]'
 kubectl apply -f - >/dev/null <<EOF
@@ -250,11 +222,6 @@ EOF
 wait_for "the ConfigSync syncs, with no request, when the store appears" '[ "$(config LOG_LEVEL)" = "changed" ]' 20
 wait_for "it is ready again" '[ "$(condition app Ready status)" = "True" ]'
 check "a Normal Event says so" 'has_event app Normal Synced'
-put "$NS/app/config.env" 'this line is not an assignment\n'
-request_sync
-wait_for "the ConfigSync is not ready again" '[ "$(condition app Ready status)" = "False" ]'
-put "$NS/app/config.env" 'GREETING=two\nLOG_LEVEL=again\n'
-wait_for "the timer tries a failed sync again, with no request" '[ "$(config LOG_LEVEL)" = "again" ]' 100
 
 echo "Check 9: warnings, and a spec that the rules refuse"
 kubectl apply -f - >/dev/null <<EOF
@@ -346,7 +313,8 @@ check "a cluster-wide store must keep each namespace in its own folder" \
 
 echo "Check 13: a restart of the operator replaces no pod"
 wait_for "the workload rolled to the new values" 'rolled_from "$BEFORE"' 120
-PODS=$(pods); HANDLED=$(status lastHandledSyncRequest)
+PODS=$(pods)
+HANDLED=$(status lastHandledSyncRequest)
 kubectl rollout restart -n pepr-system "$WATCHER" deployment/pepr-kmo >/dev/null
 kubectl rollout status -n pepr-system "$WATCHER" --timeout=180s >/dev/null
 wait_for "the operator syncs once when it starts, also while the admission pods start" \
@@ -360,4 +328,4 @@ kubectl delete csync app -n "$NS" >/dev/null
 wait_for "the ConfigMap is gone" '! kubectl get configmap app-kmo -n "$NS" >/dev/null 2>&1'
 wait_for "the Secret is gone" '! kubectl get secret app-kmo -n "$NS" >/dev/null 2>&1'
 
-[ "$FAILED" = "0" ] && echo "All checks passed." || { echo "At least one check failed."; exit 1; }
+finish

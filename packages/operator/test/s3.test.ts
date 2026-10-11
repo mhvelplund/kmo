@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SyncFailure } from "../src/cluster";
-import { fetchSources, type GetObject } from "../src/s3";
+import { MAX_OUTPUT_BYTES } from "@kmo/core";
+import { fetchSources, refuseLargeFile, type GetObject } from "../src/s3";
 
 const keys = {
   config: "shop/orders-api/config.env",
@@ -50,5 +51,26 @@ describe("fetching the source files", () => {
     expect((failure as SyncFailure).message).toBe(
       'could not read "shop/orders-api/secrets.env" from bucket "kmo-config": AccessDenied',
     );
+  });
+});
+
+describe("a file that is too large to fit in a ConfigMap or a Secret", () => {
+  it("is refused by its size alone, with the key and the bucket in the message", () => {
+    const refuse = () => refuseLargeFile("kmo-config", keys.config, MAX_OUTPUT_BYTES + 1);
+    expect(refuse).toThrow(SyncFailure);
+    expect(refuse).toThrow(`"${keys.config}" in bucket "kmo-config" is 1048577 bytes; the limit is 1048576`);
+  });
+
+  it("is not refused at the limit, or when the store does not tell the size", () => {
+    expect(() => refuseLargeFile("kmo-config", keys.config, MAX_OUTPUT_BYTES)).not.toThrow();
+    expect(() => refuseLargeFile("kmo-config", keys.config, undefined)).not.toThrow();
+  });
+
+  it("fails the fetch with its own reason, not as a store that cannot be reached", async () => {
+    const get: GetObject = async (bucket, key) => {
+      refuseLargeFile(bucket, key, MAX_OUTPUT_BYTES + 1);
+      return undefined;
+    };
+    await expect(fetchSources(get, store, "kmo-config", keys)).rejects.toMatchObject({ reason: "OutputTooLarge" });
   });
 });

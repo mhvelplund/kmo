@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MalformedEventError, normalizeEventBridgeEvent, normalizeRustfsEvent } from "../src/events";
 import eventBridgeCreated from "./fixtures/eventbridge-object-created.json";
+import parameterStore from "./fixtures/eventbridge-parameter-store.json";
 import rustfsDelete from "./fixtures/rustfs-delete.json";
 import rustfsPut from "./fixtures/rustfs-put.json";
 
@@ -69,5 +70,13 @@ describe("an EventBridge event", () => {
     ["is not an object", 42],
   ])("is malformed when it %s", (_, body) => {
     expect(() => normalizeEventBridgeEvent(body)).toThrow(MalformedEventError);
+  });
+
+  it("yields nothing for an event from a source other than S3, so other kinds of store can come later", () => {
+    expect(normalizeEventBridgeEvent(parameterStore)).toEqual([]);
+  });
+
+  it("still refuses an event that names no source and no file", () => {
+    expect(() => normalizeEventBridgeEvent({ detail: {} })).toThrow(MalformedEventError);
   });
 });

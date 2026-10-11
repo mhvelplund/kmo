@@ -34,13 +34,17 @@ export function normalizeRustfsEvent(body: unknown): StoreEvent[] {
   });
 }
 
+const S3_SOURCE = "aws.s3";
+
 /**
  * Reads an Amazon S3 event delivered through EventBridge.
  * @param body The parsed JSON body.
- * @returns A single event, with the key exactly as sent.
- * @throws MalformedEventError if the body is not an S3 EventBridge event.
+ * @returns A single event, with the key exactly as sent; nothing for an event from a source other than S3.
+ * @throws MalformedEventError if the body is an S3 event, or names no source, and has no bucket and key.
  */
 export function normalizeEventBridgeEvent(body: unknown): StoreEvent[] {
+  const source = dig(body, "source");
+  if (typeof source === "string" && source !== S3_SOURCE) return [];
   const bucket = dig(body, "detail", "bucket", "name");
   const key = dig(body, "detail", "object", "key");
   if (typeof bucket !== "string" || typeof key !== "string") {

@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# Creates the bucket for the cluster's public signing keys and prints the issuer address.
+#!/usr/bin/env -S usage bash
+#USAGE about "Creates the bucket for the cluster's public signing keys and prints the issuer address"
 set -euo pipefail
 : "${AWS_REGION:?set AWS_REGION}"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)

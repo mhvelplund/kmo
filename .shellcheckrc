@@ -1,0 +1,6 @@
+# The scripts start through `usage bash`, which ShellCheck does not know as a shell.
+shell=bash
+external-sources=true
+source-path=SCRIPTDIR
+# check and wait_for take a condition in single quotes and evaluate it later.
+disable=SC2016,SC2034

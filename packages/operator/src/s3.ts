@@ -1,5 +1,5 @@
 import { GetObjectCommand, HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
-import type { SourceName, SourceStatus, SourceTexts, Store } from "@kmo/core";
+import { MAX_OUTPUT_BYTES, type SourceName, type SourceStatus, type SourceTexts, type Store } from "@kmo/core";
 import { SyncFailure, type StoreCredentials } from "./cluster";
 
 /** Reads one object; undefined means the object does not exist. */
@@ -22,7 +22,8 @@ const SOURCES: SourceName[] = ["config", "secrets", "commonConfig", "commonSecre
  * @param bucket The store's bucket.
  * @param keys The full key of each file to read.
  * @returns The text of each file that exists, and a record of every file asked for.
- * @throws SyncFailure with reason StoreUnreachable when any file cannot be read; nothing is returned in that case.
+ * @throws SyncFailure with reason StoreUnreachable when any file cannot be read, or OutputTooLarge when one is too
+ *   large; nothing is returned in that case.
  */
 export async function fetchSources(
   get: GetObject,
@@ -42,12 +43,29 @@ export async function fetchSources(
         texts[name] = object.text;
         return { store, key, found: true, ...(object.versionId ? { versionId: object.versionId } : {}) };
       } catch (error) {
+        if (error instanceof SyncFailure) throw error;
         const code = (error as { name?: string }).name ?? "unknown error";
         throw new SyncFailure("StoreUnreachable", `could not read "${key}" from bucket "${bucket}": ${code}`);
       }
     }),
   );
   return { texts, sources };
+}
+
+/**
+ * Refuses a file that can never fit in a ConfigMap or a Secret, before its body is read.
+ * @param bucket The store's bucket.
+ * @param key The full key of the file.
+ * @param bytes The size that the store reports, when it reports one.
+ * @throws SyncFailure with reason OutputTooLarge when the size passes MAX_OUTPUT_BYTES.
+ */
+export function refuseLargeFile(bucket: string, key: string, bytes: number | undefined): void {
+  if (bytes !== undefined && bytes > MAX_OUTPUT_BYTES) {
+    throw new SyncFailure(
+      "OutputTooLarge",
+      `"${key}" in bucket "${bucket}" is ${bytes} bytes; the limit is ${MAX_OUTPUT_BYTES}`,
+    );
+  }
 }
 
 /**
@@ -76,6 +94,12 @@ export function s3GetObject(store: Store, credentials: StoreCredentials): GetObj
   return async (bucket, key) => {
     try {
       const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      try {
+        refuseLargeFile(bucket, key, response.ContentLength);
+      } catch (error) {
+        (response.Body as { destroy?: () => void } | undefined)?.destroy?.();
+        throw error;
+      }
       return { text: (await response.Body?.transformToString("utf-8")) ?? "", versionId: response.VersionId };
     } catch (error) {
       if ((error as { name?: string }).name === "NoSuchKey") return undefined;

@@ -1,4 +1,5 @@
 import {
+  OutputTooLargeError,
   SourceParseError,
   buildOutputs,
   isSuspended,
@@ -73,6 +74,8 @@ export async function runSync(sync: ConfigSyncKind): Promise<SyncOutcome> {
     if (error instanceof SyncFailure) return { result: "failed", reason: error.reason, message: error.message };
     if (error instanceof SourceParseError)
       return { result: "failed", reason: "SourceUnparsable", message: error.message };
+    if (error instanceof OutputTooLargeError)
+      return { result: "failed", reason: "OutputTooLarge", message: error.message };
     Log.error(error, "KMO sync failed unexpectedly");
     const name = error instanceof Error ? error.name : "unknown";
     return { result: "failed", reason: "InternalError", message: `unexpected error (${name}); see the operator log` };

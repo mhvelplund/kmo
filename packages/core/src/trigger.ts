@@ -119,3 +119,19 @@ export function syncsUsingStore(store: Store, syncs: ConfigSync[], stores: Store
     });
   });
 }
+
+/**
+ * Builds the object that asks for a sync of a ConfigSync when it is applied to the cluster.
+ * @param sync The resource.
+ * @param now The current time, which becomes the value of the sync annotation.
+ * @returns The resource's identity and the sync annotation, and nothing else. The uid makes the API server refuse the
+ *   apply when the resource is gone.
+ */
+export function syncRequestApply(sync: ConfigSync, now: Date) {
+  const { name, namespace, uid } = sync.metadata;
+  return {
+    apiVersion: "kmo.isntall.net/v1alpha1",
+    kind: "ConfigSync",
+    metadata: { name, namespace, uid, annotations: { [SYNC_REQUESTED_ANNOTATION]: now.toISOString() } },
+  };
+}

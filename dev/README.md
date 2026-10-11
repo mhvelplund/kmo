@@ -8,6 +8,8 @@ cluster. [Getting started](../docs/getting-started.md) explains how to run it.
 - `k3d.yaml` defines the cluster `kmo`: one server, one agent, an image registry, and the object store's port published
   on the host as `localhost:9000`.
 - `aws-config` is the AWS command line profile for the local store. The `store` task uses it.
+- `demo.sh` changes one value of the sample service `orders-api` in the store and shows each step up to the new pods.
+  The `demo` task runs it.
 - `kustomization.yaml` is what the `deploy` task applies. It lists the manifests in `store/`, `workloads/`, `kmo/` and
   `tenants/`, and generates two ConfigMaps, the seed files that the seed Job uploads, from the files in `store-files/`
   and `store-files-tenant/`.
@@ -22,6 +24,8 @@ cluster. [Getting started](../docs/getting-started.md) explains how to run it.
   environment when it starts. It also holds a ConfigSync for each workload.
 - `kmo/` holds the namespace `kmo-system`, and the cluster-wide store `default` with the credentials of the local object
   store.
+- `receiver/` holds the receiver's ServiceAccount, its three permissions, the local token, its Deployment and its
+  Service. The `receiver:deploy` task applies it, after it has pushed the image.
 - `tenants/` holds two sample tenants. `payments` is a trusted tenant: it has its own store and credentials in its own
   namespace. `partners` is an untrusted tenant: it uses a cluster-wide store that allows only that namespace and keeps
   its credentials in `kmo-system`. Both tenants use the root keys of the local store, because it gives out no keys that

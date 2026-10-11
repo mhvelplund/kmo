@@ -1,7 +1,7 @@
 import { DotenvParseError, parseDotenv } from "./dotenv";
 import { configHash } from "./hash";
 import { mergeValues } from "./merge";
-import type { EnvValues, SourceName } from "./types";
+import type { EnvValues, OutputKind, SourceName } from "./types";
 
 /** The text of each file of one source that was found; a missing file is left out. */
 export type SourceTexts = Partial<Record<SourceName, string>>;
@@ -43,17 +43,46 @@ export class SourceParseError extends Error {
   }
 }
 
+/** The most bytes of keys and values that Kubernetes stores in one ConfigMap or one Secret. */
+export const MAX_OUTPUT_BYTES = 1024 * 1024;
+
+/** Raised when the merged values do not fit in a ConfigMap or a Secret. Never carries a value. */
+export class OutputTooLargeError extends Error {
+  /**
+   * @param kind The object that would be too large.
+   * @param bytes The size of its keys and values.
+   */
+  constructor(
+    readonly kind: OutputKind,
+    readonly bytes: number,
+  ) {
+    super(`the values for the ${kind} take ${bytes} bytes; the limit is ${MAX_OUTPUT_BYTES}`);
+    this.name = "OutputTooLargeError";
+  }
+}
+
 /**
  * Builds a workload's ConfigMap data, Secret data and hash from its source files.
  * @param sources The files of each source, in the order of the ConfigSync.
  * @returns The merged outputs: every common file first, then every service file, a later source winning.
  * @throws SourceParseError if any file cannot be parsed; nothing is returned in that case.
+ * @throws OutputTooLargeError if the merged values of either object pass MAX_OUTPUT_BYTES.
  */
 export function buildOutputs(sources: SourceInput[]): Outputs {
   const all = (file: SourceName) => sources.map((source) => parse(source, file));
   const configMapData = mergeValues(...all("commonConfig"), ...all("config"));
   const secretData = mergeValues(...all("commonSecrets"), ...all("secrets"));
+  refuseLarge("ConfigMap", configMapData);
+  refuseLarge("Secret", secretData);
   return { configMapData, secretData, configHash: configHash(configMapData, secretData) };
+}
+
+function refuseLarge(kind: OutputKind, values: EnvValues): void {
+  const bytes = Object.entries(values).reduce(
+    (total, [key, value]) => total + Buffer.byteLength(key) + Buffer.byteLength(value),
+    0,
+  );
+  if (bytes > MAX_OUTPUT_BYTES) throw new OutputTooLargeError(kind, bytes);
 }
 
 function parse(source: SourceInput, file: SourceName): EnvValues {

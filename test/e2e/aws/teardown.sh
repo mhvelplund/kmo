@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# Removes everything that issuer.sh and setup.sh created, in the cluster and in AWS.
+#!/usr/bin/env -S usage bash
+#USAGE about "Removes everything that issuer.sh and setup.sh created, in the cluster and in AWS"
 set -euo pipefail
 : "${AWS_REGION:?set AWS_REGION}"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
@@ -15,7 +15,7 @@ aws iam delete-open-id-connect-provider --open-id-connect-provider-arn "$PROVIDE
 aws s3 rm "s3://$OIDC_BUCKET" --recursive 2>/dev/null || true
 aws s3api delete-bucket --bucket "$OIDC_BUCKET" 2>/dev/null || true
 for kind in Versions DeleteMarkers; do
-  aws s3api list-object-versions --bucket "$CONFIG_BUCKET" --query "$kind[].[Key,VersionId]" --output text 2>/dev/null |
+  aws s3api list-object-versions --bucket "$CONFIG_BUCKET" --query "${kind}[].[Key,VersionId]" --output text 2>/dev/null |
     while read -r key version; do
       [ "$key" = "None" ] ||
         aws s3api delete-object --bucket "$CONFIG_BUCKET" --key "$key" --version-id "$version" >/dev/null

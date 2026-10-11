@@ -1,6 +1,6 @@
 import type { ResolvedConfigSync } from "./defaults";
 import type { Outputs } from "./render";
-import type { TargetKind } from "./types";
+import type { OutputKind, TargetKind } from "./types";
 
 /** Annotation on a pod template that holds the hash of the config the pods received. */
 export const CONFIG_HASH_ANNOTATION = "kmo.isntall.net/config-hash";
@@ -50,7 +50,15 @@ export interface PodTemplate {
 }
 
 /** What happened to one target of a ConfigSync. */
-export type TargetState = "stamped" | "unchanged" | "missing" | "borrowed";
+export type TargetState =
+  /** The config hash was written to its pod template, so its pods roll. */
+  | "stamped"
+  /** Its pod template already had the config hash. */
+  | "unchanged"
+  /** The workload does not exist. */
+  | "missing"
+  /** A Rollout that takes its pod template from a Deployment, so it has none to stamp. */
+  | "borrowed";
 
 /** One target after a reconcile. */
 export interface TargetReport {
@@ -119,7 +127,7 @@ export function hashStamp(kind: TargetKind, name: string, namespace: string, has
  * @param name The object's name.
  * @returns True when a container or init container uses it through envFrom or an env entry, or a volume mounts it.
  */
-export function referencesObject(podSpec: PodSpec | undefined, kind: "ConfigMap" | "Secret", name: string): boolean {
+export function referencesObject(podSpec: PodSpec | undefined, kind: OutputKind, name: string): boolean {
   const isConfigMap = kind === "ConfigMap";
   const containers = [...(podSpec?.containers ?? []), ...(podSpec?.initContainers ?? [])];
   const byContainer = containers.some(

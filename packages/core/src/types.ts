@@ -7,6 +7,9 @@ export type TargetKind = "Deployment" | "StatefulSet" | "DaemonSet" | "CronJob" 
 /** The two kinds of store. */
 export type StoreKind = "ConfigStore" | "ClusterConfigStore";
 
+/** The two kinds of object KMO writes. */
+export type OutputKind = "ConfigMap" | "Secret";
+
 /** The four files a ConfigSync reads from one store. */
 export type SourceName = "config" | "secrets" | "commonConfig" | "commonSecrets";
 
@@ -98,12 +101,21 @@ export interface Store {
 
 /** Why a reconcile stopped without writing anything. */
 export type FailureReason =
+  /** The spec of the ConfigSync holds a value that cannot be used. */
   | "InvalidSpec"
+  /** A source names a store that does not exist or does not allow the namespace. */
   | "StoreNotFound"
+  /** The store's identity is incomplete, or it gave no keys for the bucket. */
   | "CredentialsMissing"
+  /** The bucket did not answer, or it refused the read. */
   | "StoreUnreachable"
+  /** A source file is not a valid env file. */
   | "SourceUnparsable"
+  /** An object that KMO does not manage already has the name of an output. */
   | "OutputTaken"
+  /** A source file, or the merged values of one output, is over 1 MiB. */
+  | "OutputTooLarge"
+  /** An error that the operator did not expect; its log has the details. */
   | "InternalError";
 
 /** A failed reconcile: a reason for machines and a message for people. */
@@ -127,7 +139,15 @@ export interface SourceStatus {
 }
 
 /** The conditions a ConfigSync reports. */
-export type ConditionType = "Ready" | "SourcesFound" | "TargetsWired" | "Suspended";
+export type ConditionType =
+  /** The last reconcile wrote the outputs, so they match the store. */
+  | "Ready"
+  /** At least one source file holds values. */
+  | "SourcesFound"
+  /** Every target exists and uses the outputs that hold values. */
+  | "TargetsWired"
+  /** The ConfigSync is suspended, so the operator leaves it alone. */
+  | "Suspended";
 
 /** One named fact in a resource's status. */
 export interface Condition {

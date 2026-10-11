@@ -5,6 +5,9 @@ k3d = "5.9.0"
 pre-commit = "4.6.2"
 aws-cli = "2.37.12"
 jq = "1.8.2"
+shellcheck = "0.11.0"
+shfmt = "3.14.1"
+usage = "6.12.1"
 
 [env]
 KUBECONFIG = "{{config_root}}/.kube/config"
@@ -15,7 +18,18 @@ run = ["npm install", "pre-commit install"]
 
 [tasks.lint]
 description = "Run every static check"
-run = ["npm run lint", "npm run format:check", "npm run lint:md", "npm run typecheck"]
+run = [
+  "npm run lint",
+  "npm run format:check",
+  "npm run lint:md",
+  "npm run typecheck",
+  "git ls-files -co --exclude-standard '*.sh' | xargs shellcheck",
+  "git ls-files -co --exclude-standard '*.sh' | xargs shfmt --diff",
+]
+
+[tasks.format]
+description = "Rewrite files with Prettier and the shell scripts with shfmt"
+run = ["npm run format", "git ls-files -co --exclude-standard '*.sh' | xargs shfmt --write"]
 
 [tasks."cluster:up"]
 description = "Create the local k3d cluster and its image registry"
@@ -70,6 +84,21 @@ run = [
 description = "Show the last ten minutes of the operator's watcher log"
 run = "kubectl logs -n pepr-system deployment/pepr-kmo-watcher --since=10m"
 
+[tasks."receiver:deploy"]
+description = "Build the receiver, push its image to the cluster's registry and install it"
+run = [
+  "npm run build --workspace @kmo/receiver",
+  "docker build --quiet -t localhost:5111/kmo-receiver:dev packages/receiver",
+  "docker push --quiet localhost:5111/kmo-receiver:dev",
+  "kubectl apply -f dev/receiver/",
+  "kubectl rollout restart deployment/kmo-receiver -n kmo-system",
+  "kubectl rollout status deployment/kmo-receiver -n kmo-system --timeout=120s",
+]
+
+[tasks."receiver:logs"]
+description = "Show the last ten minutes of the receiver's log"
+run = "kubectl logs -n kmo-system deployment/kmo-receiver --since=10m"
+
 [tasks."aws:issuer"]
 description = "Create the bucket for the cluster's public signing keys in AWS and print the issuer address"
 run = "test/e2e/aws/issuer.sh"
@@ -84,8 +113,12 @@ run = "test/e2e/aws/teardown.sh"
 
 [tasks."check:rollout-guard"]
 description = "Prove the guarded Rollout watch on the local cluster (removes and reinstalls Argo Rollouts)"
-run = "test/e2e/rollout-guard.sh"
+run = "test/e2e/run.sh rollout-guard"
 
 [tasks."test:e2e"]
-description = "Run the end-to-end smoke test of the operator on the local cluster"
-run = "test/e2e/smoke.sh"
+description = "Run the end-to-end suites on the local cluster; name suites after -- to run only those"
+run = "test/e2e/run.sh"
+
+[tasks.demo]
+description = "Change a file in the local store and show the rollout that follows"
+run = "dev/demo.sh"

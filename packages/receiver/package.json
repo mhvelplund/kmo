@@ -1,0 +1,17 @@
+{
+  "name": "@kmo/receiver",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Turns a store change event into a sync request on each affected ConfigSync",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=cjs --outfile=dist/receiver.cjs"
+  },
+  "dependencies": {
+    "@kmo/core": "*",
+    "@kubernetes/client-node": "1.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

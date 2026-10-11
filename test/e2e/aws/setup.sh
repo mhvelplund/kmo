@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# Proves a store without stored keys against a real AWS account, from the local cluster.
+#!/usr/bin/env -S usage bash
+#USAGE about "Proves a store without stored keys against a real AWS account, from the local cluster"
 set -euo pipefail
 : "${AWS_REGION:?set AWS_REGION}" "${KMO_OIDC_ISSUER:?set KMO_OIDC_ISSUER; see issuer.sh}"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
@@ -11,8 +11,8 @@ PROVIDER_ARN="arn:aws:iam::$ACCOUNT:oidc-provider/$ISSUER_HOST"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-kubectl get --raw /.well-known/openid-configuration > "$TMP/discovery.json"
-kubectl get --raw /openid/v1/jwks > "$TMP/jwks.json"
+kubectl get --raw /.well-known/openid-configuration >"$TMP/discovery.json"
+kubectl get --raw /openid/v1/jwks >"$TMP/jwks.json"
 [ "$(jq -r .issuer "$TMP/discovery.json")" = "$KMO_OIDC_ISSUER" ] || {
   echo "The cluster does not sign tokens as $KMO_OIDC_ISSUER. Recreate it: mise run cluster:down && mise run cluster:up"
   exit 1
@@ -47,7 +47,7 @@ printf 'GREETING=hello from a real S3 bucket, with no stored key\n' |
 printf 'REGION=%s\n' "$AWS_REGION" | aws s3 cp - "s3://$CONFIG_BUCKET/_common/config.env"
 
 echo "4. Create the role that trusts one ServiceAccount of this cluster"
-cat > "$TMP/trust.json" <<EOF
+cat >"$TMP/trust.json" <<EOF
 { "Version": "2012-10-17", "Statement": [{
     "Effect": "Allow",
     "Principal": { "Federated": "$PROVIDER_ARN" },
@@ -56,7 +56,7 @@ cat > "$TMP/trust.json" <<EOF
       "$ISSUER_HOST:sub": "system:serviceaccount:aws-demo:kmo-store",
       "$ISSUER_HOST:aud": "sts.amazonaws.com" } } }] }
 EOF
-cat > "$TMP/access.json" <<EOF
+cat >"$TMP/access.json" <<EOF
 { "Version": "2012-10-17", "Statement": [
     { "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::$CONFIG_BUCKET" },
     { "Effect": "Allow", "Action": ["s3:GetObject", "s3:GetObjectVersion"],

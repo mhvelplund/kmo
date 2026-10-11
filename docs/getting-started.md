@@ -5,19 +5,21 @@ installs everything else.
 
 ## Start the environment
 
-Run these four tasks in order:
+Run these five tasks in order:
 
 ```bash
 mise run setup
 mise run cluster:up
 mise run deploy
 mise run operator:deploy
+mise run receiver:deploy
 ```
 
 The first installs the tools and dependencies. The second creates a small Kubernetes cluster inside Docker. The third
 installs the KMO resource kinds and an object store, fills the store with sample files and creates five sample
 workloads. The fourth builds the operator and installs it. The pods of the workloads start only then, because they wait
-for the ConfigMaps and Secrets that the operator writes.
+for the ConfigMaps and Secrets that the operator writes. The fifth builds the receiver, pushes its image to the
+cluster's registry and installs it.
 
 ## What you get
 
@@ -29,6 +31,7 @@ for the ConfigMaps and Secrets that the operator writes.
 - Three new kinds of resource: ConfigSync, ConfigStore and ClusterConfigStore. The cluster has one cluster-wide store
   named `default`, which points at the local object store, and one ConfigSync for each workload in `shop`. List them
   with `kubectl get clusterconfigstore` and `kubectl get configsync -n shop`.
+- The receiver in the `kmo-system` namespace. The object store sends it an event for each changed file.
 - Two sample tenants, `payments` and `partners`, each with one workload. [Tenants](#tenants) explains them.
 
 The `store` task runs the AWS command line against the local store. For example,
@@ -47,99 +50,66 @@ After it has written the two objects, the operator puts a hash of their values o
 the annotation `kmo.isntall.net/config-hash`. When the values change, the hash changes and Kubernetes rolls the
 workload. When the values are the same, nothing is restarted.
 
-## Read the state of a ConfigSync
+## What starts a sync
 
-The operator reports on the ConfigSync itself. `kubectl get csync -n shop` shows for each one whether it is ready, the
-stores it read and the time of its last sync. `kubectl describe csync orders-api -n shop` shows the rest:
+The object store tells the receiver about each changed file, and the receiver asks for a sync of every ConfigSync that
+reads the file. So a change arrives in seconds. The operator also syncs when a ConfigSync, one of its two objects, one
+of its workloads or one of its stores changes, and when the refresh interval has passed. A ConfigSync that failed is
+tried again once a minute.
 
-- The status lists every file that was asked for, with its store, whether it exists, and the version that was read.
-- Four conditions say what is true now. `Ready` is false when the last sync failed, and its reason and message say why.
-  `SourcesFound` is false when every file is missing or empty. `TargetsWired` is false when a workload does not exist or
-  does not use the two objects. `Suspended` says whether syncing is paused. The last three are warnings: the ConfigSync
-  is still ready.
-- Events record that something happened: a failure, a recovery, a new warning. A failure that repeats is recorded once.
+`kubectl get csync -n shop` shows for each ConfigSync whether it is ready, the stores it read and the time of its last
+sync. `kubectl describe csync orders-api -n shop` shows the files that were read, four conditions and the Events. To
+make KMO leave a ConfigSync alone, set `suspend: true` in its spec.
 
-A message never holds a value from a file. It names the store, the file and the line.
-
-## When the operator syncs
-
-The operator does not wait to be told about every change. It syncs a ConfigSync:
-
-- when the ConfigSync is created or its spec changes;
-- when one of its two objects is edited or deleted, so a hand edit is undone within seconds;
-- when one of its workloads is created or its spec changes, so a workload that arrives late gets its hash;
-- when a store it uses is created, changed or deleted;
-- when its refresh interval has passed, 30 minutes unless `refreshInterval` says otherwise;
-- once a minute while it is not ready, so a failure is tried again without help.
-
-Every one of these sets the annotation `kmo.isntall.net/sync-requested-at` on the ConfigSync, and the operator syncs
-when that annotation changes. You can set it too.
-
-To make the operator leave a ConfigSync alone, set `suspend: true` in its spec. Nothing is read, written or restarted
-until you set it back, and a hand edit stays. The `Suspended` column and condition show it.
-
-## One ConfigSync for each workload
-
-Two ConfigSyncs that claim the same workload, or write an object with the same name, would undo each other's work. The
-API server asks the operator before it stores a ConfigSync, and the operator refuses one that shares a target or an
-output name with another ConfigSync in the namespace. You see the refusal at once, in the output of `kubectl apply`. A
-suspended ConfigSync keeps its claims.
-
-This check runs in its own pods, `pepr-kmo` in `pepr-system`. While they are down, no ConfigSync can be created or
-changed.
+[ConfigSync](configsync.md) is the reference for all of this: every field, the status, the failures and the warnings.
 
 ## Tenants
 
-A tenant is a team that shares the cluster with others. KMO has two kinds of store for them.
-
-- A team that is trusted with credentials has a **ConfigStore** in its own namespace, next to the Secret with its keys.
-  `payments` is such a team. Its store is named `default`, so its ConfigSync `ledger` uses it without naming it: a store
-  in the namespace wins over the cluster-wide store of the same name.
-- For a team that must not see credentials, an administrator creates a **ClusterConfigStore**. Its keys stay in
-  `kmo-system`, and it lists the namespaces that may use it. `partners` is such a team. Its store reads the same bucket
-  as the store `default`, under the key prefix `partners-store`, and has its own common folder there.
-
-A ConfigSync on a cluster-wide store reads only the folder of its own namespace and the common folder. It cannot name a
-key, and the API server refuses a cluster-wide store whose service folder does not hold `{namespace}`. A ConfigSync in a
-namespace that a store does not allow is not ready, and its message says so.
-
-Each store has a `Ready` column: the operator checks once a minute, and when the store changes, that the bucket can be
-reached with the store's credentials. See it with `kubectl get clusterconfigstore` and `kubectl get configstore -A`. The
-log of each tenant's workload shows where its values came from: `kubectl logs -n payments deployment/ledger` and
-`kubectl logs -n partners deployment/portal`.
-
-Both tenants use the root keys of the local store, so the store itself does not keep them apart here; KMO's rules do. A
-store in AWS can do without stored keys: see [Stores in AWS without stored keys](aws-identity.md).
-
-Who may create a store or read a Secret is not decided by KMO. The cluster's own access rules for people decide that,
-and an administrator sets them up.
+A tenant is a team that shares the cluster with others. The local environment has two. `payments` is trusted with
+credentials and has its own store in its own namespace. `partners` is not, and uses a cluster-wide store whose
+credentials it cannot reach. [Tenants](tenants.md) explains both, and what keeps one team out of the files of another.
 
 ## Try it
 
-A changed file in the store is not noticed at once yet, so ask for a sync by hand after you change one. This is the
-annotation that the receiver will set later:
+`mise run demo` changes one value of the sample service `orders-api` in the store, and shows each step that follows: the
+receiver's log line, the new ConfigMap, the new hash, the rolling update and the value in a new pod. Nothing in it is
+done by hand after the file is changed.
+
+To change a file yourself, use the `store` task. This puts a new greeting in the file of `orders-api`:
 
 ```bash
-kubectl annotate csync orders-api -n shop kmo.isntall.net/sync-requested-at="$(date -u +%FT%T.%3NZ)" --overwrite
+printf 'GREETING=hello again\nLOG_LEVEL=debug\n' | mise run store -- s3 cp - s3://kmo-config/shop/orders-api/config.env
 ```
 
-Change `shop/orders-api/config.env` in the store with the `store` task, ask for a sync, and watch the pods of
-`orders-api` be replaced with `kubectl rollout status deployment/orders-api -n shop`. To see a failure, put a line that
-is not `KEY=value` in the file and ask for a sync: the ConfigSync is not ready, an Event says which line is wrong, and
-the ConfigMap keeps its old values. `mise run deploy` puts the sample files back.
+Watch the pods be replaced with `kubectl rollout status deployment/orders-api -n shop`, and read what the receiver did
+with `mise run receiver:logs`. To see a failure, put a line that is not `KEY=value` in the file: the ConfigSync is not
+ready, an Event says which line is wrong, and the ConfigMap keeps its old values. `mise run deploy` puts the sample
+files back.
 
-## What does not work yet
-
-- Nothing tells the operator at once that a file in the store changed. The refresh interval picks the change up, or you
-  ask for a sync as shown above. The receiver will close this gap.
+When something does not do what you expect, read [Troubleshooting](troubleshooting.md).
 
 ## Check that it works
 
-`mise run test:e2e` runs a smoke test of the whole path on the local cluster: files in the store, the two objects, the
-hash, the rolling update, what the ConfigSync reports, what starts a sync, what is refused, and what happens on a
-failure. It takes about three minutes and prints one line for each check. It creates the cluster first when there is
-none, so it also works straight after `mise run setup`.
+`mise run test:e2e` runs six suites of checks on the local cluster, one after the other, and prints one line for each
+check and a summary at the end. It takes about twelve minutes. It creates the cluster first when there is none, so it
+also works straight after `mise run setup`.
+
+- `smoke` is the whole path for one service: the two objects, the hash, the rolling update, what the ConfigSync reports,
+  what starts a sync, what is refused, and what happens on a failure. It takes about two minutes.
+- `events` is the receiver: its answers, and changed files that reach the pods with no request by hand.
+- `kinds` is a rolling update of each of the five kinds of workload.
+- `failures` is the failures that the smoke suite does not cover, and the timer that tries again.
+- `tenants` is the rules that keep tenants apart.
+- `rollout-guard` proves that the operator runs with and without Argo Rollouts. It removes and reinstalls Argo Rollouts
+  and takes about seven minutes.
+
+Name suites after `--` to run only those: `mise run test:e2e -- smoke` is the quick check after a change.
 
 ## Clean up
 
 `mise run cluster:down` deletes the cluster and everything in it.
+
+## Read next
+
+- [Architecture](architecture.md) for how the parts fit together.
+- [Concepts](concepts.md) for the Kubernetes ideas behind them.

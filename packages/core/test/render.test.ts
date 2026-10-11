@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SourceParseError, buildOutputs, type SourceTexts } from "../src/render";
+import { MAX_OUTPUT_BYTES, OutputTooLargeError, SourceParseError, buildOutputs, type SourceTexts } from "../src/render";
 
 /** One source, named after its store. */
 const from = (store: string, texts: SourceTexts) => ({ store, texts });
@@ -68,5 +68,26 @@ describe("a workload with several sources", () => {
       from("B", { commonConfig: "LOG_LEVEL=b-common\nREGION=b-common" }),
     ]);
     expect(outputs.configMapData).toEqual({ LOG_LEVEL: "a-service", REGION: "b-common" });
+  });
+});
+
+describe("outputs that Kubernetes cannot store", () => {
+  const big = "x".repeat(MAX_OUTPUT_BYTES / 2);
+
+  it("are refused when the merged values of the ConfigMap pass one mebibyte, also when each file is below it", () => {
+    const build = () => buildOutputs([from("A", { commonConfig: `FIRST=${big}`, config: `SECOND=${big}` })]);
+    expect(build).toThrow(OutputTooLargeError);
+    expect(build).toThrow(/^the values for the ConfigMap take \d+ bytes; the limit is 1048576$/);
+  });
+
+  it("are refused for the Secret in the same way", () => {
+    expect(() => buildOutputs([from("A", { commonSecrets: `FIRST=${big}`, secrets: `SECOND=${big}` })])).toThrow(
+      /for the Secret/,
+    );
+  });
+
+  it("count what is written, so a large value that a later file replaces does no harm", () => {
+    const outputs = buildOutputs([from("A", { commonConfig: `KEY=${big}${big}`, config: "KEY=small" })]);
+    expect(outputs.configMapData).toEqual({ KEY: "small" });
   });
 });
