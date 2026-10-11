@@ -11,8 +11,9 @@ the core logic exist. The operator and the receiver do not. The operator plan (s
 been written yet.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
-code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, namespace `kmo-system`, label
-`app.kubernetes.io/managed-by: kmo`.
+code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, label
+`app.kubernetes.io/managed-by: kmo`. The receiver and the credentials of cluster-wide stores live in the namespace
+`kmo-system`; the operator runs in `pepr-system`, which Pepr does not let you change.
 
 ## What KMO is
 
@@ -65,18 +66,34 @@ Invariants that span the design and are easy to break:
 
 An npm workspace of source-only TypeScript packages: nothing is compiled, and consumers import the `.ts` sources.
 
-`packages/core` exists and holds every decision that needs no cluster: env file parsing (`dotenv.ts`), merging and
-hashing (`render.ts`), ConfigSync defaulting (`defaults.ts`), store lookup and tenant access rules (`store.ts`), the
-RustFS and EventBridge event normalizers (`events.ts`) and event-to-ConfigSync matching (`matching.ts`). It must not
-make Kubernetes or network calls. Parse errors carry a line number and a reason, never a value, because values may be
-secrets.
+`packages/core` exists and holds every decision that needs no cluster: env file parsing (`dotenv.ts`), merging
+(`merge.ts`), hashing (`hash.ts`), turning the four source files into outputs (`render.ts`), ConfigSync defaulting
+(`defaults.ts`, `duration.ts`), store lookup and tenant access rules (`store.ts`), the RustFS and EventBridge event
+normalizers (`events.ts`) and event-to-ConfigSync matching (`matching.ts`). Shared types are in `types.ts`. The package
+is `@kmo/core` and everything is exported through `src/index.ts`. It must not make Kubernetes or network calls. Parse
+errors carry a line number and a reason, never a value, because values may be secrets.
 
 Still to come: `packages/operator` (the Pepr module), `packages/receiver` (the HTTP service), `crds/` and `test/e2e/`.
 The operator and receiver are to be thin shells around core. `dev/` holds the local environment; its hand-generated
 `<name>-kmo` ConfigMaps and Secrets are stand-ins until the operator writes them.
 
+One root `tsconfig.json` checks every package and emits nothing. Imports are extensionless, `verbatimModuleSyntax`
+requires `import type` for types, and `noUncheckedIndexedAccess` is on.
+
+## What the spike means for the operator
+
 The spike findings in `docs/superpowers/spikes/` record what was verified about RustFS and Pepr; read them before
-planning operator work.
+planning operator work. The consequences that are easiest to trip over:
+
+- The root `overrides` pins `js-yaml` for every package, which breaks `pepr build`. Scope it to `markdownlint-cli` and
+  regenerate the lockfile when `packages/operator` is added.
+- A watch on a kind that is not installed crash-loops Pepr's watcher and takes the refresh timer with it. Hence the
+  guarded Rollout watch (`KMO_GUARD_ROLLOUT_WATCH`, on by default). It is decided but untested, and must be proven on
+  the cluster before anything depends on it.
+- The operator's own status updates trigger a reconcile. Return early when neither `metadata.generation` nor the sync
+  annotation has changed.
+- Every watcher start reconciles every resource once.
+- Use scoped RBAC with hand-written rules; Pepr's default grants cluster admin.
 
 ## Commands
 
@@ -84,7 +101,9 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 
 - `mise run setup` installs the npm dependencies and the Git hooks.
 - `mise run lint` runs ESLint, the Prettier check, markdownlint and the TypeScript type check (`npm run typecheck`).
-- `npm run format` rewrites files with Prettier (line length 120). Run it before committing.
+- `npm run format` rewrites files with Prettier (line length 120). Run it before committing; the pre-commit hook only
+  checks. `packages/core/test/fixtures/` is excluded because the payloads are real captures, and
+  `docs/superpowers/plans/` is excluded from both Prettier and markdownlint.
 - `mise run test` runs the unit tests with Vitest. One file: `npx vitest run packages/core/test/dotenv.test.ts`. One
   test: add `-t "part of its name"`.
 - `mise run cluster:up` and `mise run cluster:down` create and delete the local k3d cluster. Its kubeconfig is
@@ -92,16 +111,19 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 - `mise run deploy` installs Argo Rollouts, RustFS, the seed Job and the sample workloads from `dev/`.
 - `mise run store -- <aws args>` runs the AWS CLI against the local RustFS, for example `mise run store -- s3 ls`.
 
-Pre-commit also runs gitleaks and a TypeScript type check. Commit directly to `main`; do not create branches. Use
-conventional commit messages with the types `feat`, `fix` and `chore`, for example `feat: add the env file parser`.
+Pre-commit runs ESLint, the Prettier check, markdownlint, the TypeScript type check and gitleaks. Commit directly to
+`main`; do not create branches. Leave finished work uncommitted for review: commit only when asked, never push, and do
+not start the next step unasked. Use conventional commit messages with the types `feat`, `fix` and `chore`, for example
+`feat: add the env file parser`.
 
-The remaining planned tasks (`test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster with RustFS as
-the object store and Argo Rollouts installed.
+The remaining planned tasks (`test:e2e`, `demo`) do not exist yet. The local environment is a k3d cluster named `kmo`
+with Argo Rollouts installed, RustFS in the `kmo-dev` namespace holding the bucket `kmo-config`, and the sample
+workloads in `shop`. `kubectl` reaches this cluster only when Mise is active, because Mise sets `KUBECONFIG`.
 
 ## How the build proceeds
 
-The spec lists thirteen ordered steps, starting with tooling, the local cluster and a throwaway spike that checks three
-risky assumptions about RustFS and Pepr. Work one step at a time: explain beforehand what is being built and which
+The spec lists thirteen ordered steps. Steps 1 to 4 (tooling, the local cluster, the spike and the core logic) are done;
+the next is step 5, the custom resources. Work one step at a time: explain beforehand what is being built and which
 Kubernetes idea it introduces, finish with something observable, then pause for questions. Do not batch several steps
 into one change. Implementation is test-first.
 
@@ -115,3 +137,4 @@ into one change. Implementation is test-first.
   any `docs` sub-folder is named `index.md`.
 - **Root README.** A short introduction and file layout, a pointer to `docs/index.md`, and installation instructions for
   a cluster (in full or by link).
+- **KISS.** Use ASD-STE100 Simplified Technical English to explain things.

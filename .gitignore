@@ -1,4 +1,5 @@
 node_modules/
 dist/
 .kube/
+.claude/worktrees/
 *.log

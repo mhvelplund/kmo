@@ -4,7 +4,7 @@ import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["**/node_modules/", "**/dist/", "packages/kmo-spike/", "packages/spike-lib/"]),
+  globalIgnores(["**/node_modules/", "**/dist/", ".claude/worktrees/"]),
   js.configs.recommended,
   tseslint.configs.recommended,
   prettier,
