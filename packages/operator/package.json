@@ -63,7 +63,20 @@
           "kmo.isntall.net"
         ],
         "resources": [
-          "configsyncs",
+          "configsyncs"
+        ],
+        "verbs": [
+          "get",
+          "list",
+          "watch",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "kmo.isntall.net"
+        ],
+        "resources": [
           "configstores",
           "clusterconfigstores"
         ],
@@ -71,6 +84,42 @@
           "get",
           "list",
           "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "kmo.isntall.net"
+        ],
+        "resources": [
+          "configsyncs/status"
+        ],
+        "verbs": [
+          "get",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          "kmo.isntall.net"
+        ],
+        "resources": [
+          "configstores/status",
+          "clusterconfigstores/status"
+        ],
+        "verbs": [
+          "get",
+          "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "events"
+        ],
+        "verbs": [
+          "create"
         ]
       },
       {
@@ -83,6 +132,8 @@
         ],
         "verbs": [
           "get",
+          "list",
+          "watch",
           "create",
           "patch"
         ]
@@ -98,6 +149,8 @@
         ],
         "verbs": [
           "get",
+          "list",
+          "watch",
           "patch"
         ]
       },
@@ -110,14 +163,40 @@
         ],
         "verbs": [
           "get",
+          "list",
+          "watch",
           "patch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "serviceaccounts"
+        ],
+        "verbs": [
+          "get"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "serviceaccounts/token"
+        ],
+        "verbs": [
+          "create"
         ]
       }
     ]
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1149.0",
+    "@aws-sdk/client-sts": "3.1149.0",
     "@kmo/core": "*",
+    "@kubernetes/client-node": "1.4.0",
     "kubernetes-fluent-client": "3.12.3",
     "pepr": "2.0.3"
   }

@@ -1,17 +1,23 @@
 import {
   SourceParseError,
   buildOutputs,
+  isSuspended,
+  needsReconcile,
   outputObjects,
   planSync,
   storeLabel,
+  wiringProblems,
   type PlannedSource,
   type SourceInput,
   type SourceStatus,
+  type SyncOutcome,
 } from "@kmo/core";
 import { Log } from "pepr";
-import { SyncFailure, listStores, readCredentials } from "./cluster";
-import { ownerOf, toCore, type ConfigSyncKind } from "./kinds";
+import { SyncFailure, getOrUndefined, listStores } from "./cluster";
+import { readCredentials } from "./credentials";
+import { ConfigSyncKind, ownerOf, toCore } from "./kinds";
 import { writeOutputs } from "./outputs";
+import { report } from "./report";
 import { fetchSources, s3GetObject } from "./s3";
 import { stampTargets } from "./targets";
 
@@ -37,14 +43,16 @@ export async function readSources(
 }
 
 /**
- * Reconciles one ConfigSync.
- * @param sync The resource Pepr delivered.
+ * Does the work of one reconcile.
+ * @param sync The resource as it is in the cluster now.
+ * @returns How it ended. Expected failures are returned, never thrown.
  */
-export async function reconcile(sync: ConfigSyncKind): Promise<void> {
-  const where = { namespace: sync.metadata?.namespace, name: sync.metadata?.name };
+export async function runSync(sync: ConfigSyncKind): Promise<SyncOutcome> {
   try {
+    if (isSuspended(toCore(sync))) return { result: "suspended" };
+
     const plan = planSync(toCore(sync), await listStores());
-    if (!plan.ok) throw new SyncFailure(plan.reason, plan.message);
+    if (!plan.ok) return { result: "failed", reason: plan.reason, message: plan.message };
 
     const read = await readSources(plan.sources);
     const outputs = buildOutputs(read.inputs);
@@ -53,22 +61,36 @@ export async function reconcile(sync: ConfigSyncKind): Promise<void> {
     await writeOutputs(outputObjects(plan.sync, outputs, owner), owner);
     const targets = await stampTargets(plan.sync, outputs.configHash);
 
-    Log.info(
-      {
-        ...where,
-        sources: read.sources,
-        configKeys: Object.keys(outputs.configMapData).length,
-        secretKeys: Object.keys(outputs.secretData).length,
-        configHash: outputs.configHash,
-        targets: targets.map(({ kind, name, state }) => ({ kind, name, state })),
-      },
-      "KMO synced",
-    );
+    return {
+      result: "synced",
+      stores: plan.sources.map((source) => storeLabel(source.store)),
+      sources: read.sources,
+      configHash: outputs.configHash,
+      empty: Object.keys(outputs.configMapData).length + Object.keys(outputs.secretData).length === 0,
+      wiringProblems: wiringProblems(plan.sync, outputs, targets),
+    };
   } catch (error) {
-    if (error instanceof SyncFailure)
-      return void Log.warn({ ...where, reason: error.reason }, `KMO sync failed: ${error.message}`);
+    if (error instanceof SyncFailure) return { result: "failed", reason: error.reason, message: error.message };
     if (error instanceof SourceParseError)
-      return void Log.warn({ ...where, reason: "SourceUnparsable" }, `KMO sync failed: ${error.message}`);
-    throw error;
+      return { result: "failed", reason: "SourceUnparsable", message: error.message };
+    Log.error(error, "KMO sync failed unexpectedly");
+    const name = error instanceof Error ? error.name : "unknown";
+    return { result: "failed", reason: "InternalError", message: `unexpected error (${name}); see the operator log` };
   }
+}
+
+/**
+ * Reconciles one ConfigSync.
+ * @param delivered The resource Pepr delivered; it is read again, so queued duplicates find nothing to do.
+ */
+export async function reconcile(delivered: ConfigSyncKind): Promise<void> {
+  const sync = await getOrUndefined(ConfigSyncKind, delivered.metadata?.name ?? "", delivered.metadata?.namespace);
+  if (!sync || !needsReconcile(toCore(sync))) return;
+
+  const outcome = await runSync(sync);
+  await report(sync, outcome);
+  const where = { namespace: sync.metadata?.namespace, name: sync.metadata?.name };
+  if (outcome.result === "failed")
+    Log.warn({ ...where, reason: outcome.reason }, `KMO sync failed: ${outcome.message}`);
+  Log.info({ ...where, result: outcome.result }, "KMO reconciled");
 }

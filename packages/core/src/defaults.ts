@@ -75,3 +75,17 @@ function resolveSources(sources: SourceSpec[] | undefined): ResolvedSource[] {
     return { storeRef, common: source.common ?? true };
   });
 }
+
+/**
+ * Resolves a ConfigSync, treating a spec that cannot be used as an answer.
+ * @param sync The resource as stored in the cluster.
+ * @returns The resolved resource, or undefined when its spec breaks a rule.
+ */
+export function resolveOrUndefined(sync: ConfigSync): ResolvedConfigSync | undefined {
+  try {
+    return resolveConfigSync(sync);
+  } catch (error) {
+    if (error instanceof ConfigSyncSpecError) return undefined;
+    throw error;
+  }
+}

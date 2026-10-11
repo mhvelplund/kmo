@@ -9,6 +9,8 @@ export interface StoreCredentials {
   accessKeyId: string;
   /** The secret half of the key pair. */
   secretAccessKey: string;
+  /** The third part of short-lived keys; absent for stored keys. */
+  sessionToken?: string;
 }
 
 /** Raised when a reconcile must stop without writing anything. */
@@ -85,17 +87,15 @@ export function credentialsFrom(data: Record<string, string> | undefined, where:
 }
 
 /**
- * Reads the credentials Secret of a store.
- * @param store The store.
- * @returns Its keys.
+ * Reads stored keys from a credentials Secret.
+ * @param namespace The Secret's namespace.
+ * @param name The Secret's name.
+ * @returns The keys.
  * @throws SyncFailure with reason CredentialsMissing when the Secret or one of its keys is absent.
  */
-export async function readCredentials(store: Store): Promise<StoreCredentials> {
-  const ref = store.spec.s3.credentialsSecretRef;
-  if (!ref) throw new SyncFailure("CredentialsMissing", "the store names no credentials Secret");
-  const namespace = store.kind === "ConfigStore" ? store.metadata.namespace : ref.namespace;
-  const where = `Secret ${namespace}/${ref.name}`;
-  const secret = namespace ? await getOrUndefined(a.Secret, ref.name, namespace) : undefined;
+export async function readSecretCredentials(namespace: string, name: string): Promise<StoreCredentials> {
+  const where = `Secret ${namespace}/${name}`;
+  const secret = await getOrUndefined(a.Secret, name, namespace);
   if (!secret) throw new SyncFailure("CredentialsMissing", `${where} was not found`);
   return credentialsFrom(secret.data, where);
 }

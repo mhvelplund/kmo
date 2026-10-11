@@ -1,3 +1,5 @@
+import type { ResolvedConfigSync } from "./defaults";
+import type { Outputs } from "./render";
 import type { TargetKind } from "./types";
 
 /** Annotation on a pod template that holds the hash of the config the pods received. */
@@ -108,4 +110,62 @@ export function hashStamp(kind: TargetKind, name: string, namespace: string, has
     metadata: { name, namespace },
     spec: kind === "CronJob" ? { jobTemplate: { spec: { template } } } : { template },
   };
+}
+
+/**
+ * Tells whether a pod uses a ConfigMap or Secret.
+ * @param podSpec The pod spec of a workload.
+ * @param kind The kind of object.
+ * @param name The object's name.
+ * @returns True when a container or init container uses it through envFrom or an env entry, or a volume mounts it.
+ */
+export function referencesObject(podSpec: PodSpec | undefined, kind: "ConfigMap" | "Secret", name: string): boolean {
+  const isConfigMap = kind === "ConfigMap";
+  const containers = [...(podSpec?.containers ?? []), ...(podSpec?.initContainers ?? [])];
+  const byContainer = containers.some(
+    (container) =>
+      (container.envFrom ?? []).some((from) => (isConfigMap ? from.configMapRef : from.secretRef)?.name === name) ||
+      (container.env ?? []).some(
+        (entry) => (isConfigMap ? entry.valueFrom?.configMapKeyRef : entry.valueFrom?.secretKeyRef)?.name === name,
+      ),
+  );
+  const byVolume = (podSpec?.volumes ?? []).some(
+    (volume) =>
+      (isConfigMap ? volume.configMap?.name : volume.secret?.secretName) === name ||
+      (volume.projected?.sources ?? []).some(
+        (source) => (isConfigMap ? source.configMap : source.secret)?.name === name,
+      ),
+  );
+  return byContainer || byVolume;
+}
+
+/**
+ * Lists what is wrong with how a ConfigSync's targets are wired to its outputs.
+ * @param sync The resolved ConfigSync.
+ * @param outputs The merged values.
+ * @param targets What the reconcile found for each target.
+ * @returns One line for each problem; empty when all is well. An empty output object need not be used.
+ */
+export function wiringProblems(sync: ResolvedConfigSync, outputs: Outputs, targets: TargetReport[]): string[] {
+  const { configMapName, secretName } = sync.output;
+  const problems: string[] = [];
+  for (const target of targets) {
+    const what = `${target.kind} "${target.name}"`;
+    if (target.state === "missing") {
+      problems.push(`${what} does not exist`);
+    } else if (target.state === "borrowed") {
+      problems.push(`${what} takes its pod template from a Deployment; name that Deployment as the target`);
+    } else {
+      if (
+        Object.keys(outputs.configMapData).length > 0 &&
+        !referencesObject(target.podSpec, "ConfigMap", configMapName)
+      ) {
+        problems.push(`${what} does not use ConfigMap "${configMapName}"`);
+      }
+      if (Object.keys(outputs.secretData).length > 0 && !referencesObject(target.podSpec, "Secret", secretName)) {
+        problems.push(`${what} does not use Secret "${secretName}"`);
+      }
+    }
+  }
+  return problems;
 }

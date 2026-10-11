@@ -3267,7 +3267,7 @@ both still match is only the operator's own echo, and it returns at once.
 - Produces, from the operator: `runSync(sync: ConfigSyncKind): Promise<SyncOutcome>` in `reconcile.ts`;
   `report(sync: ConfigSyncKind, outcome: SyncOutcome): Promise<void>` in `report.ts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/wiring.test.ts`:
 
@@ -3505,7 +3505,7 @@ Run:
 `npx vitest run packages/core/test/wiring.test.ts packages/core/test/status.test.ts packages/core/test/trigger.test.ts`
 Expected: FAIL, the modules and functions do not exist.
 
-- [ ] **Step 2: Write the core code**
+- [x] **Step 2: Write the core code**
 
 In `packages/core/src/types.ts`, replace the temporary `ConfigSyncStatus` from Task 4:
 
@@ -3742,7 +3742,7 @@ Add `export * from "./status";` and `export * from "./trigger";` to `packages/co
 
 Run: `npx vitest run packages/core` Expected: PASS; 10 wiring tests, 12 status tests and 4 trigger tests are new.
 
-- [ ] **Step 3: Split the reconcile into "do" and "report"**
+- [x] **Step 3: Split the reconcile into "do" and "report"**
 
 Replace `packages/operator/src/reconcile.ts`:
 
@@ -3892,7 +3892,7 @@ Add to `pepr.rbac`:
       }
 ```
 
-- [ ] **Step 4: Check, deploy, and prove there is no loop**
+- [x] **Step 4: Check, deploy, and prove there is no loop**
 
 Run: `mise run lint && mise run test && mise run operator:deploy`
 
@@ -3900,7 +3900,7 @@ Run: `sleep 60 && mise run operator:logs | grep -c "KMO reconciled"` Expected: `
 number does not grow when the command is run again a minute later. If it grows, the guard does not work: stop and debug
 before going on, because every extra reconcile reads every file of every source again.
 
-- [ ] **Step 5: After (show, then pause)**
+- [x] **Step 5: After (show, then pause)**
 
 Show the user, with the `sync` shell helper from Task 6:
 
@@ -3943,7 +3943,7 @@ Say what does not work yet: a failed sync is not retried by itself, and nothing 
 Update `docs/getting-started.md` (how to read a ConfigSync's state) and `CLAUDE.md` (step 8 done; the status-update
 consequence is done). Pause for questions.
 
-- [ ] **Step 6: Commit (waits for the user)**
+- [x] **Step 6: Commit (waits for the user)**
 
 ```bash
 npm run format
@@ -3997,7 +3997,7 @@ in the cluster causes one list of the ConfigSyncs in its namespace.
   `requestSync(sync: ConfigSync, why: string): Promise<void>`, `onTick()`, `onOutputChange(object)`,
   `onTargetChange(kind)`, `onStoreChange(kind)`, `onStoreDelete(kind)` in `triggers.ts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/triggers.test.ts`:
 
@@ -4164,7 +4164,7 @@ describe("the generation gate", () => {
 Run: `npx vitest run packages/core/test/triggers.test.ts packages/operator/test/generation-gate.test.ts` Expected: FAIL,
 the functions and the class do not exist.
 
-- [ ] **Step 2: Write the core functions**
+- [x] **Step 2: Write the core functions**
 
 Append to `packages/core/src/trigger.ts`, and replace its imports with:
 
@@ -4275,7 +4275,7 @@ export function syncsUsingStore(store: Store, syncs: ConfigSync[], stores: Store
 
 Run: `npx vitest run packages/core/test/triggers.test.ts` Expected: PASS, 15 tests.
 
-- [ ] **Step 3: Write the gate and the triggers**
+- [x] **Step 3: Write the gate and the triggers**
 
 `packages/operator/src/generation-gate.ts`:
 
@@ -4456,7 +4456,7 @@ export function onStoreDelete(kind: StoreKind) {
 
 Run: `npx vitest run packages/operator/test/generation-gate.test.ts` Expected: PASS, 5 tests.
 
-- [ ] **Step 4: Suspend, and bind the triggers**
+- [x] **Step 4: Suspend, and bind the triggers**
 
 In `runSync` in `packages/operator/src/reconcile.ts`, add as the first lines inside `try`, and import `isSuspended` from
 `@kmo/core`. It comes before the plan, so a suspended resource causes no read of any kind:
@@ -4535,7 +4535,7 @@ In `pepr.rbac`, the rules now need these verbs (replace the earlier rules for th
       }
 ```
 
-- [ ] **Step 5: Check, deploy, and prove the triggers do not feed themselves**
+- [x] **Step 5: Check, deploy, and prove the triggers do not feed themselves**
 
 Run: `mise run lint && mise run test && mise run operator:deploy`
 
@@ -4548,7 +4548,7 @@ which `why` repeats in the log and fix that trigger's test and rule before going
 Run: `mise run check:rollout-guard` Expected: all checks pass. The Rollout watch now does real work, so the proof is
 repeated.
 
-- [ ] **Step 6: After (show, then pause)**
+- [x] **Step 6: After (show, then pause)**
 
 Show the user, one at a time, each followed by `mise run operator:logs | grep "KMO requested a sync" | tail -3`:
 
@@ -4576,7 +4576,7 @@ Say what is still missing for the full loop: the receiver, which turns a change 
 seconds. Until then the refresh interval, 30 minutes by default, is what picks up a changed file. Update
 `docs/getting-started.md` and `CLAUDE.md` (step 9 done). Pause for questions.
 
-- [ ] **Step 7: Commit (waits for the user)**
+- [x] **Step 7: Commit (waits for the user)**
 
 ```bash
 npm run format
@@ -4606,7 +4606,7 @@ ConfigSync can be created or changed, and that includes the operator's own sync 
 - Consumes: `resolveConfigSync`, `ConfigSyncSpecError`, `ConfigSyncKind`, `toCore`, `reconcile`.
 - Produces, from `@kmo/core`: `findClaimConflict(candidate: ConfigSync, others: ConfigSync[]): string | undefined`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `packages/core/test/claims.test.ts`:
 
@@ -4668,7 +4668,7 @@ describe("a ConfigSync does not conflict", () => {
 
 Run: `npx vitest run packages/core/test/claims.test.ts` Expected: FAIL, the module `../src/claims` does not exist.
 
-- [ ] **Step 2: Write the rule**
+- [x] **Step 2: Write the rule**
 
 `packages/core/src/claims.ts`:
 
@@ -4720,7 +4720,7 @@ Add `export * from "./claims";` to `packages/core/src/index.ts`.
 
 Run: `npx vitest run packages/core/test/claims.test.ts` Expected: PASS, 8 tests.
 
-- [ ] **Step 3: Bind the admission check**
+- [x] **Step 3: Bind the admission check**
 
 In `packages/operator/src/capability.ts`, replace the ConfigSync binding, and import `findClaimConflict` from
 `@kmo/core`, `K8s` from `pepr` and `toCore` from `./kinds`:
@@ -4739,14 +4739,14 @@ When(ConfigSyncKind)
 
 No new RBAC rule is needed: the admission pods use the same ServiceAccount, which may already list ConfigSyncs.
 
-- [ ] **Step 4: Check and deploy**
+- [x] **Step 4: Check and deploy**
 
 Run: `mise run lint && mise run test && mise run operator:deploy`
 
 Run: `kubectl get validatingwebhookconfiguration pepr-kmo -o jsonpath='{.webhooks[*].rules}' | jq` Expected: a rule for
 `configsyncs` in `kmo.isntall.net`. This is what tells the API server to ask the operator.
 
-- [ ] **Step 5: After (show, then pause)**
+- [x] **Step 5: After (show, then pause)**
 
 Show the user:
 
@@ -4780,7 +4780,7 @@ with `Secret "orders-api-kmo" is already an output of ConfigSync "orders-api"`, 
 webhook: `sync orders-api` is accepted. Update `docs/getting-started.md` and `CLAUDE.md` (step 10 done). Pause for
 questions.
 
-- [ ] **Step 6: Commit (waits for the user)**
+- [x] **Step 6: Commit (waits for the user)**
 
 ```bash
 npm run format
@@ -4825,7 +4825,7 @@ last missing report: the `Ready` condition of a store.
   namespace `partners`, served by the ClusterConfigStore `partners` on the bucket `kmo-config` under the key prefix
   `partners-store`.
 
-- [ ] **Step 1: Write the failing test for the store's condition**
+- [x] **Step 1: Write the failing test for the store's condition**
 
 `packages/core/test/store-status.test.ts`:
 
@@ -4861,7 +4861,7 @@ describe("the Ready condition of a store", () => {
 
 Run: `npx vitest run packages/core/test/store-status.test.ts` Expected: FAIL, `storeConditions` does not exist.
 
-- [ ] **Step 2: Write the condition and the bucket check**
+- [x] **Step 2: Write the condition and the bucket check**
 
 Append to `packages/core/src/status.ts`:
 
@@ -4984,7 +4984,7 @@ Add to `pepr.rbac`:
       }
 ```
 
-- [ ] **Step 3: Add the two tenants to the local environment**
+- [x] **Step 3: Add the two tenants to the local environment**
 
 `dev/store-files-tenant/_common/config.env`:
 
@@ -5204,7 +5204,7 @@ Update `dev/README.md`: add lines for `tenants/` (a trusted tenant with its own 
 cluster-wide store) and `store-files-tenant/` (the sample files of the second bucket), and extend the `store-files/`
 line (it also holds the folder `partners-store`, the key prefix of the partners store).
 
-- [ ] **Step 4: Find out whether the local store can give the untrusted tenant its own keys**
+- [x] **Step 4: Find out whether the local store can give the untrusted tenant its own keys**
 
 The spec asks for the partners store to have its own credentials. Both tenant Secrets above hold the local store's root
 keys, which can read every bucket. That is enough to prove KMO's rules, but it is not real separation at the store.
@@ -5219,7 +5219,7 @@ limited to a bucket prefix, and try it on the local store.
 
 Tell the user which of the two happened.
 
-- [ ] **Step 5: Check and deploy**
+- [x] **Step 5: Check and deploy**
 
 Run: `mise run lint && mise run test && mise run operator:deploy && mise run deploy`
 
@@ -5227,7 +5227,7 @@ Run: `kubectl get clusterconfigstore; kubectl get configstore -A; kubectl get cs
 `Ready` `True`; seven ConfigSyncs, all `Ready` `True`. `ledger` shows the store `ConfigStore/default` and `portal` shows
 `ClusterConfigStore/partners` in the `Stores` column.
 
-- [ ] **Step 6: After (show, then pause)**
+- [x] **Step 6: After (show, then pause)**
 
 Show the user each rule on the cluster:
 
@@ -5303,7 +5303,7 @@ describes it.
 Update `docs/getting-started.md` (the two tenants), `README.md` and `CLAUDE.md` (tenants and store readiness are done;
 Task 11 is left). Pause for questions.
 
-- [ ] **Step 7: Commit (waits for the user)**
+- [x] **Step 7: Commit (waits for the user)**
 
 ```bash
 npm run format
@@ -5369,7 +5369,7 @@ Three things to say out loud:
     `readCredentials` there
   - `readCredentials(store: Store): Promise<StoreCredentials>` in `credentials.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/core/test/identity.test.ts`:
 
@@ -5554,7 +5554,7 @@ describe("a store whose ServiceAccount cannot be used", () => {
 Run: `npx vitest run packages/core/test/identity.test.ts packages/operator/test/web-identity.test.ts`
 Expected: FAIL, the modules do not exist.
 
-- [ ] **Step 2: Write the core rule**
+- [x] **Step 2: Write the core rule**
 
 `packages/core/src/identity.ts`:
 
@@ -5610,7 +5610,7 @@ Add `export * from "./identity";` to `packages/core/src/index.ts`.
 Run: `npx vitest run packages/core/test/identity.test.ts`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 3: Write the exchange**
+- [x] **Step 3: Write the exchange**
 
 Run:
 
@@ -5794,7 +5794,7 @@ Add to `pepr.rbac` in `packages/operator/package.json`:
 Run: `npx vitest run packages/operator/test/web-identity.test.ts`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 4: Check and deploy, and see that the local stores still work**
+- [x] **Step 4: Check and deploy, and see that the local stores still work**
 
 Run: `mise run lint && mise run test && mise run operator:deploy`
 Expected: clean. If the build or the deploy says the module is too large, stop and tell the user, as in Task 4.
@@ -5802,7 +5802,7 @@ Expected: clean. If the build or the deploy says the module is too large, stop a
 Run: `sleep 90 && kubectl get clusterconfigstore; kubectl get configstore -A; kubectl get csync -A`
 Expected: every store and every ConfigSync is still `Ready` `True`. Stored keys work as before.
 
-- [ ] **Step 5: See the failures that need no AWS account**
+- [x] **Step 5: See the failures that need no AWS account**
 
 ```bash
 kubectl create serviceaccount no-role -n shop
@@ -5824,7 +5824,7 @@ Expected: first `ServiceAccount shop/no-role has no annotation "eks.amazonaws.co
 AWS's error. The second message proves that the operator got a token from Kubernetes and that the call reached AWS STS
 from inside the cluster. Show both to the user before any AWS resource is created.
 
-- [ ] **Step 6: Write the scripts for the proof on AWS**
+- [x] **Step 6: Write the scripts for the proof on AWS**
 
 All three scripts use the AWS CLI with the user's own profile and need `AWS_REGION` set. They never use the `store`
 task, which points at the local RustFS.
@@ -6026,7 +6026,7 @@ run = [
 
 Without `KMO_OIDC_ISSUER` the cluster is created exactly as before.
 
-- [ ] **Step 7: Ask the user, then recreate the cluster with a public issuer**
+- [x] **Step 7: Ask the user, then recreate the cluster with a public issuer**
 
 Stop here and ask the user for the go-ahead. The AWS profile and region belong to the user, not to the repository:
 take them from `CLAUDE.local.md` when it names them, otherwise ask. Never write them, or an account ID, into a
@@ -6047,7 +6047,7 @@ Expected: `issuer` is the bucket's address and `jwks_uri` is that address plus `
 changed: the cluster now signs its tokens under a public name, and that is the only change to the cluster. If the API
 server does not start with these two arguments, show its log (`docker logs k3d-kmo-server-0`) and stop.
 
-- [ ] **Step 8: Run the proof**
+- [x] **Step 8: Run the proof**
 
 ```bash
 mise run aws:setup
@@ -6067,7 +6067,7 @@ If the store stays not ready with `InvalidIdentityToken`, AWS could not fetch or
 `create-open-id-connect-provider` asks for a thumbprint, add `--thumbprint-list` with the SHA-1 fingerprint of the
 certificate of the bucket's host, and tell the user.
 
-- [ ] **Step 9: Prove that AWS, not KMO, keeps tenants apart**
+- [x] **Step 9: Prove that AWS, not KMO, keeps tenants apart**
 
 A second namespace names the same role. KMO does not stop that; AWS does, because the role trusts only
 `aws-demo/kmo-store`.
@@ -6089,7 +6089,7 @@ kubectl delete cstore borrowed -n shop; kubectl delete serviceaccount borrower -
 
 Expected: `AWS refused role "arn:aws:iam::…:role/kmo-aws-demo" for ServiceAccount shop/borrower: AccessDenied`.
 
-- [ ] **Step 10: After (show, then pause)**
+- [x] **Step 10: After (show, then pause)**
 
 Show the user the results of Steps 5, 8 and 9, and the session in AWS:
 `aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity --max-results 3`
@@ -6110,7 +6110,7 @@ Then ask the user whether to keep the AWS resources. Unless they want to keep th
 Update `docs/getting-started.md`, `README.md` and `CLAUDE.md`: steps 5 to 11 are done, the operator exists, the
 receiver does not; the next plan is the receiver and the finish (spec steps 12 and 13). Pause for questions.
 
-- [ ] **Step 11: Commit (waits for the user)**
+- [x] **Step 11: Commit (waits for the user)**
 
 ```bash
 npm run format

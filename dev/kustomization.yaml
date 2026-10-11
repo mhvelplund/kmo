@@ -13,6 +13,8 @@ resources:
   - kmo/namespace.yaml
   - kmo/default-store.yaml
   - workloads/configsyncs.yaml
+  - tenants/payments.yaml
+  - tenants/partners.yaml
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
@@ -31,3 +33,10 @@ configMapGenerator:
       - shop__nightly-report__secrets.env=store-files/shop/nightly-report/secrets.env
       - shop__checkout__config.env=store-files/shop/checkout/config.env
       - shop__checkout__secrets.env=store-files/shop/checkout/secrets.env
+      - partners-store___common__config.env=store-files/partners-store/_common/config.env
+      - partners-store__partners__portal__config.env=store-files/partners-store/partners/portal/config.env
+  - name: store-seed-files-tenant
+    namespace: kmo-dev
+    files:
+      - _common__config.env=store-files-tenant/_common/config.env
+      - payments__ledger__config.env=store-files-tenant/payments/ledger/config.env

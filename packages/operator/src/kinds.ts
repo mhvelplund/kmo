@@ -1,4 +1,4 @@
-import type { ConfigSync, ConfigSyncSpec, ConfigSyncStatus, Owner, StoreSpec } from "@kmo/core";
+import type { Condition, ConfigSync, ConfigSyncSpec, ConfigSyncStatus, Owner, StoreSpec } from "@kmo/core";
 import { RegisterKind, kind } from "pepr";
 import type { GuardedKind } from "./guarded-kind";
 
@@ -33,7 +33,7 @@ RegisterKind(ConfigSyncKind, {
 /** A ConfigStore as the client returns it. */
 export class ConfigStoreKind extends kind.GenericKind {
   spec?: StoreSpec;
-  status?: { conditions?: unknown[] };
+  status?: { conditions?: Condition[] };
 }
 RegisterKind(ConfigStoreKind, {
   group: "kmo.isntall.net",
@@ -45,7 +45,7 @@ RegisterKind(ConfigStoreKind, {
 /** A ClusterConfigStore as the client returns it. */
 export class ClusterConfigStoreKind extends kind.GenericKind {
   spec?: StoreSpec;
-  status?: { conditions?: unknown[] };
+  status?: { conditions?: Condition[] };
 }
 RegisterKind(ClusterConfigStoreKind, {
   group: "kmo.isntall.net",

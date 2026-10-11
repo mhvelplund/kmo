@@ -126,8 +126,37 @@ export interface SourceStatus {
   versionId?: string;
 }
 
+/** The conditions a ConfigSync reports. */
+export type ConditionType = "Ready" | "SourcesFound" | "TargetsWired" | "Suspended";
+
+/** One named fact in a resource's status. */
+export interface Condition {
+  /** Which fact this is. */
+  type: ConditionType;
+  /** Whether the fact holds. */
+  status: "True" | "False";
+  /** Short and stable, for machines. */
+  reason: string;
+  /** For people. */
+  message: string;
+  /** When the status last changed between True and False. */
+  lastTransitionTime: string;
+}
+
 /** The status of a ConfigSync. */
 export interface ConfigSyncStatus {
   /** Generation of the spec that the last reconcile handled. */
   observedGeneration?: number;
+  /** Value of the sync annotation that the last reconcile handled. */
+  lastHandledSyncRequest?: string;
+  /** When the outputs were last written, ISO 8601. */
+  lastSyncTime?: string;
+  /** Hash of the values that were last written. */
+  configHash?: string;
+  /** Kind and name of each store that was read, in the order of the sources. */
+  stores?: string[];
+  /** Every file the last good sync asked for. */
+  sources?: SourceStatus[];
+  /** The named facts about the resource. */
+  conditions?: Condition[];
 }

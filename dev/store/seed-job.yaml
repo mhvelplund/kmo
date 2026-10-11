@@ -27,6 +27,10 @@ spec:
                 key=$(basename "$file" | sed 's|__|/|g')
                 aws s3 cp "$file" "s3://kmo-config/$key"
               done
+              for file in /seed-tenant/*; do
+                key=$(basename "$file" | sed 's|__|/|g')
+                aws s3 cp "$file" "s3://kmo-tenant/$key"
+              done
           env:
             - name: AWS_ENDPOINT_URL
               value: http://rustfs.kmo-dev.svc:9000
@@ -45,7 +49,12 @@ spec:
           volumeMounts:
             - name: seed
               mountPath: /seed
+            - name: seed-tenant
+              mountPath: /seed-tenant
       volumes:
         - name: seed
           configMap:
             name: store-seed-files
+        - name: seed-tenant
+          configMap:
+            name: store-seed-files-tenant

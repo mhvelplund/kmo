@@ -11,3 +11,7 @@ export * from "./matching";
 export * from "./plan";
 export * from "./outputs";
 export * from "./workload";
+export * from "./status";
+export * from "./trigger";
+export * from "./claims";
+export * from "./identity";

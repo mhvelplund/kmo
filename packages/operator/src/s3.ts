@@ -1,4 +1,4 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import type { SourceName, SourceStatus, SourceTexts, Store } from "@kmo/core";
 import { SyncFailure, type StoreCredentials } from "./cluster";
 
@@ -82,4 +82,19 @@ export function s3GetObject(store: Store, credentials: StoreCredentials): GetObj
       throw error;
     }
   };
+}
+
+/**
+ * Checks that a store's bucket can be reached with its credentials.
+ * @param store The store.
+ * @param credentials Its keys.
+ * @throws SyncFailure with reason StoreUnreachable, naming the bucket and the error's name only.
+ */
+export async function checkBucket(store: Store, credentials: StoreCredentials): Promise<void> {
+  try {
+    await s3Client(store, credentials).send(new HeadBucketCommand({ Bucket: store.spec.s3.bucket }));
+  } catch (error) {
+    const code = (error as { name?: string }).name ?? "unknown error";
+    throw new SyncFailure("StoreUnreachable", `could not reach bucket "${store.spec.s3.bucket}": ${code}`);
+  }
 }
