@@ -75,7 +75,7 @@ workload's own values. A person can read what a pod receives from two objects, a
 not change is not restarted when a common file changes.
 
 The design document lists every decision with its reason:
-[Decisions and their reasons](superpowers/specs/2026-10-10-kmo-operator-core-design.md#decisions-and-their-reasons).
+[Decisions and their reasons](design.md#decisions-and-their-reasons).
 
 ## Where each part runs
 

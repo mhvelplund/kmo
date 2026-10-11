@@ -1,9 +1,11 @@
 # Upgrading Pepr
 
-KMO watches Argo Rollouts through a small shim, so that the operator also runs on clusters without Argo Rollouts. The
-shim uses parts of Pepr that are not public. Pepr can change them in any release, so **an upgrade of Pepr might require
-the shim to be rewritten**. For that reason Pepr and its Kubernetes client are pinned to exact versions, and an upgrade
-is never a change of one number.
+> [!CAUTION]  
+> KMO watches Argo Rollouts through a small shim, so that the operator also runs on clusters without Argo Rollouts. The
+> shim uses parts of Pepr that are not public.
+>
+> Pepr can change them in any release, so **an upgrade of Pepr might require the shim to be rewritten**. For that reason
+> Pepr and its Kubernetes client are pinned to exact versions, and an upgrade is never a change of one number.
 
 ## Procedure
 

@@ -3,5 +3,5 @@ useDefault = true
 
 [allowlist]
 description = "Sample values for the local environment and the tests"
-paths = ['''^dev/''', '''^packages/core/test/''', '''^docs/superpowers/plans/''']
+paths = ['''^dev/''', '''^packages/core/test/''']
 regexes = ['''kmo-local-secret''']

@@ -79,6 +79,18 @@ The ConfigMap holds `REGION=north`, `LOG_LEVEL=warn`, `TEAM=orders` and `GREETIN
 
 A missing file is an empty file. A store that has no files for a service adds nothing.
 
+## The two objects
+
+KMO always writes the ConfigMap and the Secret, also when they are empty. Each carries:
+
+- the label `app.kubernetes.io/managed-by: kmo`;
+- the annotation `reloader.stakater.com/ignore: "true"`, so that Stakater Reloader, where it is installed, does not roll
+  the workload a second time. Reloader still acts on the other ConfigMaps and Secrets of the workload;
+- an owner reference to the ConfigSync.
+
+The data of each object is replaced whole, so a key that someone added by hand is removed. Labels and annotations that
+others added are kept.
+
 ## The status
 
 `kubectl get csync -n shop` shows for each ConfigSync whether it is ready, whether it is suspended, the stores it read

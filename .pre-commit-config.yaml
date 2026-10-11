@@ -3,6 +3,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
@@ -43,4 +44,3 @@ repos:
         entry: npx markdownlint
         language: system
         types: [markdown]
-        exclude: ^docs/superpowers/plans/

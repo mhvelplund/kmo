@@ -28,6 +28,7 @@ In reading order:
 
 For people who work on KMO itself:
 
-- The [design](superpowers/specs/2026-10-10-kmo-operator-core-design.md) describes what was built and why.
+- The [design](design.md) gives the purpose, the scope and every decision with its reason.
+- [Commands](commands.md) lists the Mise tasks: the checks, the local cluster and the end-to-end suites.
 - [Upgrading Pepr](upgrading-pepr.md) is the procedure for a new Pepr version, and why it is not a one-line change.
 - [Known advisories](advisories.md) lists the security advisories that cannot be cleared, and why.

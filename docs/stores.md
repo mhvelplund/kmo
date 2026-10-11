@@ -106,7 +106,7 @@ store that you host yourself, such as RustFS, has one host name and no DNS recor
 
 A store is a bucket today. Stores for AWS Systems Manager Parameter Store and AWS Secrets Manager are planned and not
 built. Each will be a block next to `s3`. The design document has the four rules that are fixed for them:
-[The store resources](superpowers/specs/2026-10-10-kmo-operator-core-design.md#the-store-resources).
+[Other kinds of store](design.md#other-kinds-of-store).
 
 ## Read next
 
