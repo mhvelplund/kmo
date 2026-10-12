@@ -127,7 +127,7 @@ and a **ClusterRole** lists what may be done in all of them. A binding gives a r
 means that a program gets only what it needs.
 
 The receiver has three permissions, and none on Secrets. The operator's rules are written by hand, because Pepr's
-default would make it a cluster administrator. Read `dev/receiver/receiver.yaml` and the `rbac` list in
+default would make it a cluster administrator. Read `charts/kmo/templates/receiver.yaml` and the `rbac` list in
 `packages/operator/package.json`.
 
 ## ServiceAccount token and web identity

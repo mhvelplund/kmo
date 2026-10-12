@@ -3,23 +3,22 @@
 This page says what is planned for KMO and not built, and what each piece of work must still prove. None of it is
 designed yet. Each piece needs a spec before a plan.
 
-Two pieces of work come next: packaging, and the AWS integration. Together they close most of the gaps in the scope of
-the [design](design.md#scope). Other kinds of store and a forced reload of a store come after them.
+Two pieces of work come next: the proof inside EKS, and the AWS integration. Together they close most of the gaps in the
+scope of the [design](design.md#scope). Other kinds of store and a forced reload of a store come after them.
 
-## Packaging
+## The proof inside EKS
 
-KMO has no supported installation for a real cluster. The receiver's manifests are in `dev/receiver/` and its image is
-built for the local registry. Packaging brings a Helm chart, a published image of the receiver and an ArgoCD
-application, for a real EKS cluster.
+KMO has a Helm chart and an example ArgoCD application, and both are proven on a local cluster:
+[Installing](installing.md). It is not yet installed in a real EKS cluster.
 
-It must settle these points:
+The work must settle this point:
 
-- **The proof inside EKS of stores without stored keys.** The path is proven from a cluster outside EKS. Packaging
+- **The proof inside EKS of stores without stored keys.** The path is proven from a cluster outside EKS. This work
   brings the first EKS cluster and must repeat `test/e2e/aws/setup.sh` there, without the step that publishes the
   signing keys, because EKS registers them itself. See [Stores in AWS without stored keys](aws-identity.md).
-- **The key in the chart that Pepr generates.** `pepr build` puts the private key of the admission webhook in its chart.
-  A chart that is published must not hold it. Packaging must decide how each installation gets its own key, and whether
-  the cluster needs an admission policy for `pepr-system`. See [Security](security.md).
+
+It must also decide where the images come from in EKS. The packages on GitHub are private, so a cluster needs pull
+Secrets in two namespaces. A registry in AWS would need none.
 
 ## AWS integration
 

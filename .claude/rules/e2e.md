@@ -25,5 +25,5 @@ counts reconciles must first wait until the events of its own uploads are past.
 
 ## Running them
 
-`mise run test:e2e` runs all six, in about twelve minutes. `mise run test:e2e -- smoke` runs one suite.
+`mise run test:e2e` runs all eight, in about seventeen minutes. `mise run test:e2e -- smoke` runs one suite.
 `docs/commands.md` has the details.

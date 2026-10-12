@@ -1,7 +1,7 @@
 ---
 paths:
   - "packages/receiver/**"
-  - "dev/receiver/**"
+  - "charts/kmo/templates/receiver.yaml"
 ---
 
 # Work on `packages/receiver`
@@ -27,12 +27,12 @@ paths:
 - `src/main.ts` is the entry point.
 - `npm run build --workspace @kmo/receiver` bundles it with esbuild into `dist/receiver.cjs`, and the `Dockerfile`
   copies only that bundle.
-- `dev/receiver/` holds its manifests, until packaging brings a chart.
+- `charts/kmo/templates/receiver.yaml` holds its manifests, as a template of the chart.
 
 ## The registry
 
-Docker on the build computer cannot resolve `kmo-registry.localhost`, so `receiver:deploy` pushes to `localhost:5111`.
-Inside the cluster the same registry is named `kmo-registry.localhost:5111`, which is the name in the manifest.
+Docker on the build computer cannot resolve `kmo-registry.localhost`, so `kmo:deploy` pushes to `localhost:5111`. Inside
+the cluster the same registry is named `kmo-registry.localhost:5111`, which is the default of `charts/build.sh`.
 
 ## When the work is done
 

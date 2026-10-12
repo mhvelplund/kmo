@@ -7,7 +7,7 @@ It has two programs. The receiver takes the change events of the store and asks 
 files, writes one ConfigMap and one Secret for each service, and puts a hash of their values on the workload, so that
 Kubernetes replaces the pods when a value changed and leaves them alone when none did.
 
-KMO runs end to end on a local cluster today. It has no supported installation for a real cluster yet.
+KMO runs end to end on a local cluster today. It has a Helm chart, which is not yet proven in a real cluster.
 
 ## Pages
 
@@ -25,11 +25,12 @@ In reading order:
 - [Troubleshooting](troubleshooting.md) says what to do when something does not work.
 - [Known limits](limits.md) says what KMO does not do.
 - [Planned work](planned.md) says what is planned and not built, and what is still to prove.
-- [Installing](installing.md) says what a real cluster needs today.
+- [Installing](installing.md) says how to install KMO with Helm or ArgoCD.
 
 For people who work on KMO itself:
 
 - The [design](design.md) gives the purpose, the scope and every decision with its reason.
 - [Commands](commands.md) lists the Mise tasks: the checks, the local cluster and the end-to-end suites.
+- [Releases](releases.md) says how a version is made and published.
 - [Upgrading Pepr](upgrading-pepr.md) is the procedure for a new Pepr version, and why it is not a one-line change.
 - [Known advisories](advisories.md) lists the security advisories that cannot be cleared, and why.

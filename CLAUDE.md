@@ -10,9 +10,10 @@ rolls the workloads that use them when their effective values change. It is also
 idiomatic patterns are preferred and the reasons for them are documented.
 
 The operator core is finished: the operator, the receiver and the three custom resources run end to end on a local
-cluster. Stores without stored keys are proven from the local cluster against a real AWS account, and not yet inside
-EKS. Two more pieces of work are planned, packaging (Helm, ArgoCD) and AWS integration (Terraform/Terragrunt). Neither
-is designed, and each needs a spec before a plan.
+cluster. KMO has a Helm chart, proven on the local cluster under Helm and ArgoCD, and a release workflow. Stores without
+stored keys are proven from the local cluster against a real AWS account, and not yet inside EKS. Two more pieces of
+work are planned, the proof inside EKS and the AWS integration (Terraform/Terragrunt). Neither is designed, and each
+needs a spec before a plan.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
 code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, label
@@ -52,6 +53,8 @@ Invariants that span the design and are easy to break:
 - The receiver and operator resolve stores and keys with the same code from core, so they always agree.
 - The receiver has no permission on Secrets and no code that reads the store.
 - A message in a log, a status, an Event or an HTTP answer never holds a token or a value from a file.
+- The built chart holds no private key, no webhook address and no token. Each installation makes its own key in the
+  cluster, and a CronJob renews it.
 - Do not build a general store interface before a second kind of store exists.
 
 ## Layout
@@ -61,6 +64,9 @@ An npm workspace of source-only TypeScript packages: nothing is compiled, and co
 - `packages/core` (`@kmo/core`) holds every decision that needs no cluster. It makes no Kubernetes or network call.
 - `packages/operator` (`@kmo/operator`) is the Pepr module, a thin shell around core.
 - `packages/receiver` (`@kmo/receiver`) is the HTTP service, also a thin shell around core.
+- `packages/certgen` (`@kmo/certgen`) is the program of the chart's Jobs. It makes and renews the key of the webhook.
+- `charts/` holds the hand-written half of the Helm chart, the script that builds the chart, and an example ArgoCD
+  application.
 - `crds/` holds the definitions of the three custom resources.
 - `dev/` holds the manifests of the local environment and the demo.
 - `test/e2e/` holds the end-to-end suites, in Bash, and the scripts for the proof on AWS.
@@ -81,6 +87,8 @@ Read the file that fits before you plan or change that part. Do not read them al
 | Work on `packages/receiver`                      | `.claude/rules/receiver.md`                                  |
 | Work on `test/e2e/`                              | `.claude/rules/e2e.md`                                       |
 | Work on `dev/` or `crds/`                        | `.claude/rules/dev.md`                                       |
+| Work on `charts/` or `packages/certgen`          | `.claude/rules/chart.md`, and `docs/installing.md`           |
+| A release, a version or the workflows            | `docs/releases.md`                                           |
 | Writing a shell script                           | `.claude/rules/shell.md`                                     |
 | Writing documentation                            | `.claude/rules/docs.md`                                      |
 | A person's own settings, such as the AWS region  | `CLAUDE.local.md`, which is not committed                    |
@@ -97,6 +105,8 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 - `mise run test:e2e -- smoke` runs the smoke suite on the local cluster, in about two minutes. Run it at the end of
   every task that changes the operator or the receiver. Run all suites, `mise run test:e2e`, before a commit of such a
   change.
+- `mise run kmo:deploy` builds KMO from the working tree and installs it into the local cluster with the chart. Run it
+  before `mise run deploy`.
 - The `aws:*` tasks create and delete AWS resources, so they need a go-ahead in the session each time.
 
 ## How to work
@@ -104,8 +114,10 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
 - New work starts with a spec, then a plan. Implementation is test-first.
 - Work one step at a time: explain beforehand what is being built and which Kubernetes idea it introduces, finish with
   something observable, then pause for questions. Do not batch several steps into one change.
-- Commit directly to `main`; do not create branches. Leave finished work uncommitted for review: commit only when asked,
-  never push, and do not start the next step unasked.
+- Each piece of work is on a branch and ends in a pull request. Do not commit to `main`. Leave finished work uncommitted
+  for review: commit only when asked, never push unasked, and do not start the next step unasked.
+- A merge to `main` makes a version from the commit types: `feat` and `fix` make a release, `chore` does not. Only
+  Commitizen changes a version number or `CHANGELOG.md`.
 - Use conventional commit messages with the types `feat`, `fix` and `chore`, for example
   `feat: add the env file parser`.
 

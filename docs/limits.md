@@ -22,20 +22,29 @@ This page says what KMO does not do. [Planned work](planned.md) says what is pla
 - **A common-file change rolls many workloads at once.** Restarts are not spread out.
 - **No TLS and one shared token on the receiver.** HTTPS and proper authentication are
   [planned](planned.md#aws-integration).
-- **The operator runs in `pepr-system`.** Pepr decides that, and it cannot be changed.
+- **The operator runs in `pepr-system`.** Pepr decides that, and it cannot be changed. The chart must be installed into
+  that namespace.
+- **A cluster that was off for more than 90 days** comes back with a certificate of the webhook that has ended. No
+  ConfigSync can change until the daily renewal has run. [Troubleshooting](troubleshooting.md) says how to start it by
+  hand.
+- **The operator's pods restart at each upgrade of the chart**, also when the code is the same, because Pepr writes the
+  time of the build on them.
+- **An uninstall leaves the two Secrets of the webhook** in `pepr-system`. [Installing](installing.md#uninstalling) says
+  what else stays.
+- **The address of the webhook is in the log of the admission pods.** Pepr writes it there.
 - **The Rollout guard uses parts of Pepr that are not public.** A Pepr upgrade can break it.
   [Upgrading Pepr](upgrading-pepr.md) is the procedure.
 - **One ConfigMap and one Secret for each ConfigSync, of at most 1 MiB each.** Larger values are refused with the reason
   `OutputTooLarge`, and are not split over several objects. A pod could not use them anyway: Linux allows a process
   about 2 MiB of arguments and environment in total, and about 128 KiB for one value.
 - **The receiver keeps every ConfigSync and every store in memory**, so its memory grows with their number. More pods do
-  not lower the memory of each pod, because each one keeps the full list. The local manifest limits a pod to 128Mi, and
-  a pod that passes its limit is restarted. [The receiver](receiver.md#memory) says how to size it.
+  not lower the memory of each pod, because each one keeps the full list. The chart limits a pod to 128Mi by default,
+  and a pod that passes its limit is restarted. [The receiver](receiver.md#memory) says how to size it.
 - **A key that is in both the ConfigMap and the Secret** is resolved by the order of the workload's own references. KMO
   does not check for it.
 
 ## Read next
 
-- [Installing](installing.md) for what a cluster needs today.
+- [Installing](installing.md) for how to install KMO.
 - [Troubleshooting](troubleshooting.md) for problems that have a fix.
 - [Planned work](planned.md) for what is planned and what it must still prove.

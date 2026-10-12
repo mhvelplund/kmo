@@ -60,7 +60,7 @@ paths:
 
 The module has an admission binding, so Pepr creates the Deployment `pepr-kmo` next to `pepr-kmo-watcher`, with failure
 policy `Fail`. While its pods are down, nothing can create or change a ConfigSync, the operator included. Hence
-`requestSync` sends a refused request again, and `operator:deploy` waits for both Deployments.
+`requestSync` sends a refused request again, and `kmo:deploy` waits for both Deployments.
 
 ## When the work is done
 

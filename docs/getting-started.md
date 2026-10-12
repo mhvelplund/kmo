@@ -5,21 +5,19 @@ installs everything else.
 
 ## Start the environment
 
-Run these five tasks in order:
+Run these four tasks in order:
 
 ```bash
 mise run setup
 mise run cluster:up
+mise run kmo:deploy
 mise run deploy
-mise run operator:deploy
-mise run receiver:deploy
 ```
 
 The first installs the tools and dependencies. The second creates a small Kubernetes cluster inside Docker. The third
-installs the KMO resource kinds and an object store, fills the store with sample files and creates five sample
-workloads. The fourth builds the operator and installs it. The pods of the workloads start only then, because they wait
-for the ConfigMaps and Secrets that the operator writes. The fifth builds the receiver, pushes its image to the
-cluster's registry and installs it.
+builds the operator, the receiver and the Helm chart of KMO, and installs the chart, which brings the KMO resource
+kinds. The fourth installs an object store, fills it with sample files and creates five sample workloads. It waits for
+the first of them, whose pods start when the operator has written their ConfigMap and Secret.
 
 ## What you get
 
@@ -90,8 +88,8 @@ When something does not do what you expect, read [Troubleshooting](troubleshooti
 
 ## Check that it works
 
-`mise run test:e2e` runs six suites of checks on the local cluster, one after the other, and prints one line for each
-check and a summary at the end. It takes about twelve minutes. It creates the cluster first when there is none, so it
+`mise run test:e2e` runs eight suites of checks on the local cluster, one after the other, and prints one line for each
+check and a summary at the end. It takes about seventeen minutes. It creates the cluster first when there is none, so it
 also works straight after `mise run setup`.
 
 - `smoke` is the whole path for one service: the two objects, the hash, the rolling update, what the ConfigSync reports,
@@ -100,8 +98,11 @@ also works straight after `mise run setup`.
 - `kinds` is a rolling update of each of the five kinds of workload.
 - `failures` is the failures that the smoke suite does not cover, and the timer that tries again.
 - `tenants` is the rules that keep tenants apart.
+- `chart` is the life of an installation: an upgrade, the renewal of the webhook's certificate, an uninstall and a new
+  installation.
 - `rollout-guard` proves that the operator runs with and without Argo Rollouts. It removes and reinstalls Argo Rollouts
   and takes about seven minutes.
+- `argocd` lets ArgoCD install the chart. It installs ArgoCD and removes it again.
 
 Name suites after `--` to run only those: `mise run test:e2e -- smoke` is the quick check after a change.
 

@@ -17,8 +17,11 @@
    If one fails, the shim must be changed before you continue.
 4. Run `mise run test:e2e -- rollout-guard`. The suite installs the operator, then removes and reinstalls Argo Rollouts
    on the local cluster, and takes about seven minutes. `mise run check:rollout-guard` is the same thing.
-5. Only when the contract tests and all four cluster checks pass, change the versions in the `VERIFIED` constant of the
-   contract test file.
+5. Run `mise run chart:build`. It stops when the chart that Pepr generates has changed. Then read the new templates in
+   `packages/operator/dist/kmo-chart` for a new place that holds the webhook's key or address; the build must remove
+   each one. Run `mise run test:e2e -- chart argocd`.
+6. Only when the contract tests, all four cluster checks and the two chart suites pass, change the versions in the
+   `VERIFIED` constant of the contract test file.
 
 ## When a check fails
 
