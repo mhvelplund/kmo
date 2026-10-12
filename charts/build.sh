@@ -50,6 +50,11 @@ yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1) | del(.secrets)' \
   REGISTRY=${usage_image_registry:?} yq '.receiver.image.repository = strenv(REGISTRY) + "/kmo-receiver" |
     .certgen.image.repository = strenv(REGISTRY) + "/kmo-certgen"' >"$OUT/values.yaml"
 
+# ArgoCD applies from the client unless it is told not to, and this Secret is too large for that.
+[ -f "$OUT/templates/module-secret.yaml" ] || stop "Pepr did not generate templates/module-secret.yaml. Its chart has changed."
+yq --inplace '.metadata.annotations."argocd.argoproj.io/sync-options" = "ServerSideApply=true"' \
+  "$OUT/templates/module-secret.yaml"
+
 for crd in "$ROOT"/crds/*.yaml; do
   grep -q '{{' "$crd" && stop "$(basename "$crd") holds {{, which Helm reads as a template."
   {

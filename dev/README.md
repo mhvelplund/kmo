@@ -13,6 +13,7 @@ cluster. [Getting started](../docs/getting-started.md) explains how to run it.
 - `kustomization.yaml` is what the `deploy` task applies. It lists the manifests in `store/`, `workloads/`, `kmo/` and
   `tenants/`, and generates two ConfigMaps, the seed files that the seed Job uploads, from the files in `store-files/`
   and `store-files-tenant/`.
+- `argocd/` installs a pinned ArgoCD. Only the end-to-end suite `argocd` applies it, and removes it at its end.
 - `argo-rollouts/` installs Argo Rollouts, so that a Rollout can be a target. The `deploy` task applies it separately.
 - `store/` holds the namespace `kmo-dev`, the RustFS object store, and the seed Job. The Job creates the buckets
   `kmo-config` and `kmo-tenant`, turns on versioning and notifications, and uploads the sample files.
