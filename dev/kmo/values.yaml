@@ -1,0 +1,8 @@
+receiver:
+  image:
+    tag: dev
+    pullPolicy: Always
+certgen:
+  image:
+    tag: dev
+    pullPolicy: Always

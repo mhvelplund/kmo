@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kmo-receiver-token
+  namespace: kmo-system
+stringData:
+  token: kmo-local-token

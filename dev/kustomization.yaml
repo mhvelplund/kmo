@@ -10,7 +10,6 @@ resources:
   - workloads/node-agent.yaml
   - workloads/nightly-report.yaml
   - workloads/checkout.yaml
-  - kmo/namespace.yaml
   - kmo/default-store.yaml
   - workloads/configsyncs.yaml
   - tenants/payments.yaml

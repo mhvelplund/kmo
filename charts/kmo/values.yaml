@@ -1,0 +1,45 @@
+# The values of the operator come from Pepr and are added when the chart is built.
+
+crds:
+  # Install the three definitions. Set to false when they are managed in another way.
+  install: true
+
+receiver:
+  image:
+    # Set when the chart is built.
+    repository: ""
+    # Defaults to the app version of the chart.
+    tag: ""
+    # When set, the image is named by this digest and the tag is not used.
+    digest: ""
+    pullPolicy: IfNotPresent
+  # Names of pull Secrets in kmo-system.
+  imagePullSecrets: []
+  # The Secret in kmo-system that holds the token. The chart does not create it.
+  tokenSecret:
+    name: kmo-receiver-token
+    key: token
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+certgen:
+  image:
+    # Set when the chart is built.
+    repository: ""
+    # Defaults to the app version of the chart.
+    tag: ""
+    # When set, the image is named by this digest and the tag is not used.
+    digest: ""
+    pullPolicy: IfNotPresent
+  # Names of pull Secrets in pepr-system. They must exist before the installation.
+  imagePullSecrets: []
+  # The number of days that a new certificate of the webhook is valid.
+  certificateDays: 90
+  # The certificate is renewed when it has this number of days left, or fewer.
+  renewBeforeDays: 30
+  # When the renewal looks at the certificate, in the form of cron.
+  schedule: "17 3 * * *"
