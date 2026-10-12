@@ -13,6 +13,7 @@ cluster. [Getting started](../docs/getting-started.md) explains how to run it.
 - `kustomization.yaml` is what the `deploy` task applies. It lists the manifests in `store/`, `workloads/`, `kmo/` and
   `tenants/`, and generates two ConfigMaps, the seed files that the seed Job uploads, from the files in `store-files/`
   and `store-files-tenant/`.
+- `argocd/` installs a pinned ArgoCD. Only the end-to-end suite `argocd` applies it, and removes it at its end.
 - `argo-rollouts/` installs Argo Rollouts, so that a Rollout can be a target. The `deploy` task applies it separately.
 - `store/` holds the namespace `kmo-dev`, the RustFS object store, and the seed Job. The Job creates the buckets
   `kmo-config` and `kmo-tenant`, turns on versioning and notifications, and uploads the sample files.
@@ -22,10 +23,9 @@ cluster. [Getting started](../docs/getting-started.md) explains how to run it.
 - `store-files-tenant/` holds the sample env files of the second bucket, `kmo-tenant`.
 - `workloads/` holds the namespace `shop` and five sample workloads, one of each kind that KMO supports. Each prints its
   environment when it starts. It also holds a ConfigSync for each workload.
-- `kmo/` holds the namespace `kmo-system`, and the cluster-wide store `default` with the credentials of the local object
-  store.
-- `receiver/` holds the receiver's ServiceAccount, its three permissions, the local token, its Deployment and its
-  Service. The `receiver:deploy` task applies it, after it has pushed the image.
+- `kmo/` holds the cluster-wide store `default` with the credentials of the local object store, the values of the local
+  installation, and the Secret with the local token of the receiver. The chart creates the namespace `kmo-system`, so
+  the `kmo:deploy` task runs before the `deploy` task.
 - `tenants/` holds two sample tenants. `payments` is a trusted tenant: it has its own store and credentials in its own
   namespace. `partners` is an untrusted tenant: it uses a cluster-wide store that allows only that namespace and keeps
   its credentials in `kmo-system`. Both tenants use the root keys of the local store, because it gives out no keys that

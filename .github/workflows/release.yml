@@ -1,0 +1,96 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: release
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: npm ci
+      - run: mise run lint
+      - run: mise run test
+
+  bump:
+    needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      # The token of the workflow cannot push to a main that has a rule. The App is on the bypass list.
+      - name: Get a token of the App
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: jdx/mise-action@v5
+      - name: Set the identity of the commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      # Exit code 21 means that no commit since the last tag asks for a version.
+      - name: Make the version from the commits
+        id: bump
+        run: |
+          set +e
+          uvx --from commitizen==4.19.2 cz bump --check-consistency --changelog --yes
+          code=$?
+          set -e
+          if [ "$code" -eq 21 ]; then
+            echo "No commit since the last tag asks for a version."
+            exit 0
+          fi
+          [ "$code" -eq 0 ] || exit "$code"
+          echo "version=$(uvx --from commitizen==4.19.2 cz version --project)" >>"$GITHUB_OUTPUT"
+      - name: Push the commit and the tag
+        run: git push origin main --follow-tags
+
+  publish:
+    needs: bump
+    if: needs.bump.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.bump.outputs.version }}
+      - uses: jdx/mise-action@v5
+      - run: npm ci
+      - name: Log in to the registry
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          echo "$TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Publish the two images
+        run: |
+          for name in receiver certgen; do
+            image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kmo-$name
+            npm run build --workspace "@kmo/$name"
+            docker build --tag "$image:$VERSION" "packages/$name"
+            docker push "$image:$VERSION"
+          done
+      - name: Publish the chart
+        run: |
+          charts/build.sh --image-registry "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          helm package dist/chart/kmo --destination dist
+          helm push "dist/kmo-$VERSION.tgz" "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts"

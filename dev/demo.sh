@@ -17,7 +17,7 @@ greeting() { kubectl logs -n shop "$(newest_pod)" 2>/dev/null | grep '^GREETING=
 
 if ! kubectl get deployment kmo-receiver -n kmo-system >/dev/null 2>&1; then
   echo "The local environment is not complete. Run these first, in order:"
-  echo "  mise run cluster:up && mise run deploy && mise run operator:deploy && mise run receiver:deploy"
+  echo "  mise run cluster:up && mise run kmo:deploy && mise run deploy"
   exit 1
 fi
 

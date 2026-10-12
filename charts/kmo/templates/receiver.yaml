@@ -29,14 +29,6 @@ subjects:
     name: kmo-receiver
     namespace: kmo-system
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kmo-receiver-token
-  namespace: kmo-system
-stringData:
-  token: kmo-local-token
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,16 +46,22 @@ spec:
     spec:
       serviceAccountName: kmo-receiver
       terminationGracePeriodSeconds: 10
+      {{- with .Values.receiver.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: receiver
-          image: kmo-registry.localhost:5111/kmo-receiver:dev
-          imagePullPolicy: Always
+          image: {{ include "kmo.image" (dict "root" . "image" .Values.receiver.image) }}
+          imagePullPolicy: {{ .Values.receiver.image.pullPolicy }}
           env:
             - name: KMO_RECEIVER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: kmo-receiver-token
-                  key: token
+                  name: {{ .Values.receiver.tokenSecret.name }}
+                  key: {{ .Values.receiver.tokenSecret.key }}
           ports:
             - name: http
               containerPort: 8080
@@ -78,11 +76,7 @@ spec:
               port: http
             periodSeconds: 20
           resources:
-            requests:
-              cpu: 10m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
+            {{- toYaml .Values.receiver.resources | nindent 12 }}
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true

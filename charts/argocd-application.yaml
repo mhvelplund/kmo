@@ -1,0 +1,32 @@
+# An example. Replace OWNER with the owner of the registry, and set the version that you want.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kmo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/OWNER/charts
+    chart: kmo
+    targetRevision: 0.1.0
+    helm:
+      releaseName: kmo
+  destination:
+    server: https://kubernetes.default.svc
+    # Pepr fixes this namespace. The chart refuses another one.
+    namespace: pepr-system
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      # The Secret with the operator's code is too large for a client-side apply.
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  # A Job of the chart fills in these two fields at each installation.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: pepr-kmo
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+        - .webhooks[].clientConfig.service.path

@@ -78,6 +78,16 @@ watcher_restarts() {
   kubectl get pods -n pepr-system -l pepr.dev/controller=watcher \
     -o jsonpath='{range .items[*]}{.status.containerStatuses[0].restartCount}{"\n"}{end}' | sort -n | tail -1
 }
+# webhook_refuses <namespace>: true when the admission webhook refuses a second ConfigSync on the same target.
+webhook_refuses() {
+  local sync='apiVersion: kmo.isntall.net/v1alpha1\nkind: ConfigSync\nmetadata: { name: %s, namespace: %s }\nspec: { targets: [{ name: app }] }\n'
+  local output
+  # shellcheck disable=SC2059
+  printf "$sync" first "$1" | kubectl apply -f - >/dev/null 2>&1 || return 1
+  # shellcheck disable=SC2059
+  output=$(printf "$sync" second "$1" | kubectl apply -f - 2>&1) && return 1
+  [[ "$output" == *"is already a target"* ]]
+}
 
 # deployment <namespace> <name> [ConfigMap]: prints a one-pod Deployment, which reads the ConfigMap when one is named.
 deployment() {
@@ -118,11 +128,10 @@ ensure_environment() {
     quietly k3d cluster start "$CLUSTER"
     quietly kubectl wait --for=condition=Ready nodes --all --timeout=120s
   fi
+  echo "Setup: installing KMO from the working tree, with the chart"
+  quietly mise -C "$ROOT" run kmo:deploy
   if ! kubectl get clusterconfigstore default >/dev/null 2>&1; then
     echo "Setup: installing the local environment"
     quietly mise -C "$ROOT" run deploy
   fi
-  echo "Setup: installing the operator and the receiver from the working tree"
-  quietly mise -C "$ROOT" run operator:deploy
-  quietly mise -C "$ROOT" run receiver:deploy
 }

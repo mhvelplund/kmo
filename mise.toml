@@ -8,13 +8,16 @@ jq = "1.8.2"
 shellcheck = "0.11.0"
 shfmt = "3.14.1"
 usage = "6.12.1"
+helm = "4.3.0"
+yq = "4.54.1"
+uv = "0.13.0"
 
 [env]
 KUBECONFIG = "{{config_root}}/.kube/config"
 
 [tasks.setup]
 description = "Install dependencies and Git hooks"
-run = ["npm install", "pre-commit install"]
+run = ["npm install", "pre-commit install", "pre-commit install --hook-type commit-msg"]
 
 [tasks.lint]
 description = "Run every static check"
@@ -43,16 +46,15 @@ description = "Delete the local k3d cluster and its image registry"
 run = "k3d cluster delete --config dev/k3d.yaml"
 
 [tasks.deploy]
-description = "Install the local environment into the cluster"
+description = "Install the local environment into the cluster, after kmo:deploy"
 run = [
-  "kubectl apply -f crds/",
-  "kubectl wait --for=condition=Established --timeout=60s crd/configsyncs.kmo.isntall.net crd/configstores.kmo.isntall.net crd/clusterconfigstores.kmo.isntall.net",
   "kubectl apply --server-side -k dev/argo-rollouts",
   "kubectl wait --for=condition=Established crd/rollouts.argoproj.io --timeout=60s",
   "kubectl delete job store-seed -n kmo-dev --ignore-not-found",
   "kubectl apply -k dev",
   "kubectl rollout status deployment/rustfs -n kmo-dev --timeout=180s",
   "kubectl wait --for=condition=Complete job/store-seed -n kmo-dev --timeout=180s",
+  "kubectl rollout status deployment/orders-api -n shop --timeout=180s",
 ]
 
 [tasks.store]
@@ -69,31 +71,32 @@ AWS_SECRET_ACCESS_KEY = "kmo-local-secret"
 description = "Run the unit tests"
 run = "npm test"
 
-[tasks."operator:deploy"]
-description = "Build the operator and install it into the cluster"
-dir = "{{config_root}}/packages/operator"
-run = [
-  "kubectl apply -f {{config_root}}/crds/",
-  "npx pepr deploy --yes",
-  "kubectl rollout status deployment/pepr-kmo -n pepr-system --timeout=180s",
-  "kubectl rollout status deployment/pepr-kmo-watcher -n pepr-system --timeout=180s",
-  "kubectl rollout status deployment/orders-api -n shop --timeout=120s",
-]
-
-[tasks."operator:logs"]
-description = "Show the last ten minutes of the operator's watcher log"
-run = "kubectl logs -n pepr-system deployment/pepr-kmo-watcher --since=10m"
-
-[tasks."receiver:deploy"]
-description = "Build the receiver, push its image to the cluster's registry and install it"
+[tasks."kmo:deploy"]
+description = "Build KMO from the working tree and install it into the cluster with the chart"
 run = [
   "npm run build --workspace @kmo/receiver",
   "docker build --quiet -t localhost:5111/kmo-receiver:dev packages/receiver",
   "docker push --quiet localhost:5111/kmo-receiver:dev",
-  "kubectl apply -f dev/receiver/",
+  "npm run build --workspace @kmo/certgen",
+  "docker build --quiet -t localhost:5111/kmo-certgen:dev packages/certgen",
+  "docker push --quiet localhost:5111/kmo-certgen:dev",
+  "charts/build.sh",
+  "helm upgrade --install kmo dist/chart/kmo --namespace pepr-system --create-namespace --values dev/kmo/values.yaml",
+  "kubectl wait --for=condition=Established --timeout=60s crd/configsyncs.kmo.isntall.net crd/configstores.kmo.isntall.net crd/clusterconfigstores.kmo.isntall.net",
+  "kubectl apply -f dev/kmo/receiver-token.yaml",
   "kubectl rollout restart deployment/kmo-receiver -n kmo-system",
+  "kubectl rollout status deployment/pepr-kmo -n pepr-system --timeout=180s",
+  "kubectl rollout status deployment/pepr-kmo-watcher -n pepr-system --timeout=180s",
   "kubectl rollout status deployment/kmo-receiver -n kmo-system --timeout=120s",
 ]
+
+[tasks."chart:build"]
+description = "Build the Helm chart of KMO into dist/chart/kmo"
+run = "charts/build.sh"
+
+[tasks."operator:logs"]
+description = "Show the last ten minutes of the operator's watcher log"
+run = "kubectl logs -n pepr-system deployment/pepr-kmo-watcher --since=10m"
 
 [tasks."receiver:logs"]
 description = "Show the last ten minutes of the receiver's log"

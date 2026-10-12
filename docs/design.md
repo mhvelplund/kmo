@@ -24,12 +24,12 @@ was chosen. [Concepts](concepts.md) explains each Kubernetes idea that KMO uses.
 
 ## Scope
 
-KMO is the operator, the receiver, the three custom resources, the tooling and a local environment, and it runs end to
-end on a local cluster.
+KMO is the operator, the receiver, the three custom resources, a Helm chart, the tooling and a local environment, and it
+runs end to end on a local cluster.
 
 It does not have:
 
-- a Helm chart, an ArgoCD application, or Terraform and Terragrunt modules;
+- an installation that is proven in a real cluster, or Terraform and Terragrunt modules;
 - TLS, ingress, or authentication of the receiver beyond a shared bearer token;
 - automatic injection of references into workloads;
 - workload kinds other than Deployment, StatefulSet, DaemonSet, CronJob and Argo Rollout;
@@ -78,6 +78,14 @@ The end-to-end suites in `test/e2e/` check these on the local cluster.
 | RustFS as the local store                                                   | RustFS is Apache-2.0, needs no registration and uses the standard S3 notification API.                                                                                                                                                     |
 | A guarded Rollout watch, on by default, with a switch                       | Pepr crash-loops on a watch whose kind is missing, so the operator checks for Argo Rollouts before watching Rollouts. The check leans on Pepr internals, so a switch turns it off and falls back to the plain watch.                       |
 | k3d for the local cluster                                                   | It is k3s in Docker: disposable, rootless, version-pinned by Mise and equipped with an image registry.                                                                                                                                     |
+| One chart for the operator and the receiver                                 | The two programs resolve stores and keys with the same code and must agree, so one version for both is a guarantee. A person installs one thing.                                                                                           |
+| The webhook's key is made by a Job in the cluster                           | A chart that is published must hold no key, and Pepr generates one into its chart at each build. ArgoCD only renders a chart, so a key made in a template would change at each sync. ingress-nginx uses the same pattern.                  |
+| The Jobs run from an image of their own                                     | Pepr's controller image has no tool that makes a certificate. The program cannot be in a ConfigMap of the chart: a Helm release holds about 1 MB, and the operator's code takes most of it.                                                |
+| A certificate of 90 days, renewed by a CronJob                              | Pepr's own certificate ends after one year and nothing renews it. The CronJob restarts pods by deleting them, because the right to change a Deployment in `pepr-system` is control of the operator.                                        |
+| The definitions are templates that are kept                                 | An upgrade of the chart brings a changed definition, under Helm and ArgoCD alike, and an uninstall deletes no resource. cert-manager and External Secrets Operator do the same.                                                            |
+| The chart is installed into `pepr-system`                                   | The first Job runs before the chart's own objects exist, so its namespace must come from the installer. Pepr fixes the namespace of the operator.                                                                                          |
+| Images by tag, with an optional digest                                      | The tag is the version of the chart, so a chart and its images always match. A cluster that wants an image that cannot be moved sets the digest.                                                                                           |
+| One version, made from the commit messages                                  | The packages, the chart and the images cannot drift apart, and nobody chooses a number by hand.                                                                                                                                            |
 
 ## How tenants stay apart
 
@@ -175,7 +183,32 @@ Pepr:
   that are written by hand.
 - `pepr build` bundles a workspace package that is only TypeScript source, so the operator can import `@kmo/core` with
   no build step between them.
-- The controller image brings its own Node, whatever version the repository pins.
+- The controller image brings its own Node, whatever version the repository pins. It has no `openssl` and no `kubectl`.
+- `pepr build` generates a Helm chart. It writes the webhook's key into a template, and the address into a template and
+  into `values.yaml`. Its certificate is valid for one year.
+- Pepr reads the certificate once, when the program starts. The watcher loads it too, for its health and metrics port.
+- Pepr writes the address into the log of each admission pod at its start.
+- The chart's deployment templates put `imagePullSecrets` under the container, where Kubernetes does not read it.
+- Pepr writes the time of the build on both pod templates, so each build restarts the operator's pods at an upgrade.
+- The Secret with the operator's code is about 267 KB.
+
+## What was verified about Helm and ArgoCD
+
+These facts were checked on the local cluster, with Helm 4.3.0 and ArgoCD v3.5.4.
+
+- A Helm hook that runs before the installation can make a Secret that the chart's pods wait for.
+- `helm upgrade` leaves a field that the chart does not set and that something else wrote.
+- ArgoCD runs the hooks of an installation as its phases PreSync and PostSync, and deletes them when they are done.
+- ArgoCD shows an application as synced and healthy before PostSync has run. The sync operation is done later.
+- ArgoCD leaves the two fields of the webhook configuration alone when they are under `ignoreDifferences` and the option
+  `RespectIgnoreDifferences` is set.
+- ArgoCD cannot apply an object above 262 KB from the client. The Secret with the operator's code needs
+  `ServerSideApply`. A sync that is started by hand does not take the options of the application, so the chart also
+  marks that Secret itself.
+- ArgoCD reads a chart from a registry over plain HTTP when the repository Secret has `enableOCI` and
+  `insecureOCIForceHttp`.
+- A Helm release is one Secret that holds the chart and its rendered objects. The chart of KMO takes about 420 KB of it,
+  compressed.
 
 ## Read next
 

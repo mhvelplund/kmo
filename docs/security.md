@@ -44,9 +44,10 @@ These rights are outside the namespace, and they are as strong:
 - **Change or delete the ValidatingWebhookConfiguration `pepr-kmo`.** Without it, conflicting ConfigSyncs are no longer
   refused. With a changed address, another program answers in place of the operator.
 - **Change the three definitions in `crds/`.** A deleted definition deletes every resource of its kind.
-- **Push to the image registry, or change the build.** The image of Pepr's controller, the image of the receiver, the
-  computer or pipeline that runs `pepr build`, and the Git repository that a tool such as ArgoCD installs from are all
-  ways to the same code. Name images by digest where you can, and protect the branch that is installed.
+- **Push to the image registry, or change the build.** The image of Pepr's controller, the two images of KMO, the chart
+  in the registry, the workflow that publishes them, and the Git repository that a tool such as ArgoCD installs from are
+  all ways to the same code. Protect the branch that is installed. The chart names its two images by tag; set
+  `receiver.image.digest` and `certgen.image.digest` to name them by digest, which cannot be moved to another image.
 
 ## Rights that only read
 
@@ -109,21 +110,48 @@ Repeat it for `update secret/pepr-kmo-module`, `create pods`, `create serviceacc
 `pepr-system`, and for `get secrets` in `kmo-system`.
 
 A rule cannot refuse a person who holds a right through a ClusterRoleBinding. For that, the cluster needs an admission
-policy for the two namespaces. KMO does not bring one.
+policy for the two namespaces. KMO does not bring one: who may act in a namespace depends on the groups of each cluster,
+so the policy stays with the cluster administrators.
 
-## The key in the generated chart
+## The key of the webhook
 
-`pepr build` writes a Helm chart and a manifest to `packages/operator/dist`. Both hold the Secret `pepr-kmo-tls` with
-the private key of the admission webhook, and the Secret `pepr-kmo-api-path`. Pepr makes a new key in each build.
+The API server calls the admission webhook over HTTPS, at an address with a random part. So the webhook has a
+certificate with a private key, in the Secret `pepr-kmo-tls`, and that random part, in the Secret `pepr-kmo-api-path`. A
+person with the key, who can also take the traffic that the API server sends to the webhook, can answer in place of the
+operator: allow ConfigSyncs that conflict, or refuse them all. The requests hold ConfigSyncs only, and no value from a
+store.
 
-Today this is not a problem: the folder is not committed, each installation is its own build, and the key goes to that
-cluster only. It becomes a problem when one build is given to many clusters or put in a Git repository. Then every
-cluster has the same key, and every reader of the chart knows it. A person with the key, who can also take the traffic
-that the API server sends to the webhook, can answer in place of the operator: allow ConfigSyncs that conflict, or
-refuse them all. The requests hold ConfigSyncs only, and no value from a store.
+**The chart holds neither.** `pepr build` makes a new key and a new address at each build and writes them into the chart
+that it generates: the key in a template, the address in a template and a second time in the values. A chart that is
+published is one build for every cluster. So the build of KMO's chart removes all three, and stops when the result still
+holds a private key or the address. A person who runs `pepr build` directly still gets a chart with a key: do not
+publish or commit that output.
 
-So do not publish the output of one build, and do not commit it. Build for each cluster, or replace the two Secrets at
-installation. Packaging must settle this: see [Planned work](planned.md#packaging).
+**Each installation makes its own, in the cluster.** A Job of the chart makes the key and the address before the
+installation, and a second Job writes the certificate authority and the address into the webhook configuration after it.
+Nobody outside the cluster ever holds the key. The two Jobs may read the two Secrets, create a Secret in `pepr-system`,
+and patch the one webhook configuration. These rights are deleted with the Jobs.
+
+**The certificate is renewed without a person.** It is valid for 90 days. The CronJob `kmo-certgen-renew` looks at it
+each day, and makes a new one when 30 days are left:
+
+1. It writes the old and the new authority together into the webhook configuration. So the API server trusts pods with
+   the old certificate and pods with the new one.
+2. It replaces the Secret.
+3. It restarts the pods of the webhook, one at a time, and waits for each replacement. Pepr reads the certificate only
+   when it starts, which is why a restart is needed.
+
+A run that was interrupted is completed by the next one: each run restarts a pod of the webhook that is older than the
+Secret.
+
+**The rights of the CronJob stay**, because it is an ordinary object of the release. They are: read, delete and create
+the Secret `pepr-kmo-tls`; patch the one webhook configuration; list and delete pods in `pepr-system`. Kubernetes cannot
+limit the right to create to one name, so it holds for every Secret in `pepr-system`. The CronJob restarts pods by
+deleting them, because the right to change a Deployment in `pepr-system` gives control of the operator, and the right to
+delete a pod does not.
+
+**The address is not a strong secret.** Pepr writes it into the log of each admission pod when the pod starts. So a
+person who can read those logs knows the address. The key is what protects the webhook.
 
 ## Read next
 

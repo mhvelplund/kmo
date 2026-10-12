@@ -1,0 +1,6 @@
+{{- if ne .Release.Namespace "pepr-system" }}
+{{- fail "KMO must be installed into the namespace pepr-system, which Pepr fixes. Use: --namespace pepr-system --create-namespace" }}
+{{- end }}
+{{- if not (and .Values.receiver.image.repository .Values.certgen.image.repository) }}
+{{- fail "An image repository is empty. Use a chart that charts/build.sh made." }}
+{{- end }}

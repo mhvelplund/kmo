@@ -90,8 +90,8 @@ A log line never holds the token or a value from a file.
 The receiver keeps every ConfigSync and every store of the cluster in memory. That is what lets it answer an event
 without a read from the API server, and it means that its memory grows with the number of those resources.
 
-- On the local cluster, with seven ConfigSyncs and three stores, a pod uses about 35Mi. The manifest in `dev/receiver/`
-  requests 64Mi and limits a pod to 128Mi.
+- On the local cluster, with seven ConfigSyncs and three stores, a pod uses about 35Mi. The chart requests 64Mi and
+  limits a pod to 128Mi by default; the value `receiver.resources` changes that.
 - A ConfigSync takes a few KB in the list. A rough estimate for 5,000 of them is 50 to 100 MB on top of the base. This
   is an estimate and was not measured.
 - A pod that passes its limit is killed and started again. While it starts, it answers 503, the store sends its events

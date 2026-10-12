@@ -10,8 +10,10 @@ Both run end to end on a local cluster. See the [documentation](docs/index.md) f
 ## Layout
 
 - `packages/` holds the TypeScript packages. `core` is the shared logic, `operator` is the Pepr module that runs in the
-  cluster, and `receiver` is the HTTP service that takes the change events of the store.
+  cluster, `receiver` is the HTTP service that takes the change events of the store, and `certgen` makes and renews the
+  key of the admission webhook.
 - `crds/` holds the definitions of the three KMO resource kinds.
+- `charts/` holds the Helm chart, the script that builds it, and an example ArgoCD application.
 - `dev/` holds the manifests for the local environment, with two sample tenants, and the demo.
 - `test/e2e/` holds the suites that run against the local cluster, and the scripts for the proof on AWS.
 - `docs/` holds the documentation, starting at [docs/index.md](docs/index.md).
@@ -19,5 +21,6 @@ Both run end to end on a local cluster. See the [documentation](docs/index.md) f
 
 ## Installing
 
-KMO has no supported installation for a real cluster yet. [Installing](docs/installing.md) says what a cluster needs
-today. To try KMO on a local cluster, follow [Getting started](docs/getting-started.md).
+KMO is installed with one Helm chart, by Helm or by ArgoCD. [Installing](docs/installing.md) has the steps. The chart is
+proven on a local cluster, and not yet in a real one. To try KMO on a local cluster, follow
+[Getting started](docs/getting-started.md).

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Keeps ConfigMaps and Secrets in step with env files in an object store",
+  "scripts": {
+    "build": "pepr build"
+  },
   "pepr": {
     "uuid": "kmo",
     "onError": "reject",

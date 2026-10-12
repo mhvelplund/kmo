@@ -62,7 +62,8 @@ While a ConfigSync is not ready, its two objects keep their last good values, an
 - The message names another ConfigSync: the two share a target or an output name. Use one ConfigSync for the workload,
   or give them different targets and output names.
 - The message says `unknown field`: the spec has a field that does not exist. A ConfigSync cannot name a key.
-- The message is about a webhook that could not be called: the admission pods are down. See the next entry.
+- The message is about a webhook that could not be called: the admission pods are down, or their certificate is not
+  trusted. See the next two entries.
 
 ## Nothing can create or change a ConfigSync
 
@@ -70,12 +71,34 @@ The Deployment `pepr-kmo` in `pepr-system` is down. The API server asks it about
 policy is `Fail`: no answer means no. Look at `kubectl get pods -n pepr-system`. While it is down, the operator and the
 receiver cannot ask for a sync either. Nothing is lost: the requests are made again.
 
+## The certificate of the webhook has ended or is not trusted
+
+The message of the refusal names `x509` or a certificate. The certificate is valid for 90 days and the CronJob
+`kmo-certgen-renew` in `pepr-system` renews it. This happens after a cluster was off for a long time, or when the
+renewal failed for 30 days.
+
+- Read the end date:
+  `kubectl get secret pepr-kmo-tls -n pepr-system -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -enddate`.
+- Start the renewal now: `kubectl create job renew-now --from=cronjob/kmo-certgen-renew -n pepr-system`. Its log says
+  what it did. It also restarts a pod of the webhook that still runs an older certificate.
+- A renewal that failed shows as a failed Job of the CronJob: `kubectl get jobs -n pepr-system`.
+- A Secret from an installation before the chart has no `ca.crt`. Delete the Secret `pepr-kmo-tls` and upgrade the
+  release; the chart makes a new one.
+
+## An installation with the chart does not finish
+
+- Helm says that KMO must be installed into `pepr-system`: use `--namespace pepr-system --create-namespace`.
+- The Job `kmo-certgen-create` cannot pull its image: the pull Secret must be in `pepr-system` before the installation.
+  See [Installing](installing.md#before-you-install).
+- The receiver's pod stays in `CreateContainerConfigError`: the Secret with the token is missing in `kmo-system`.
+- ArgoCD says that an annotation is too long: the application needs the option `ServerSideApply`.
+
 ## The operator's watcher restarts in a loop
 
-Pepr's watcher stops when it watches a kind that is not installed. The usual cause is that a definition from `crds/` is
-missing: apply them. KMO guards its watch on Argo Rollouts against this, with the setting `KMO_GUARD_ROLLOUT_WATCH`,
-which is on by default. When it is set to `false`, Argo Rollouts must be installed before the operator starts.
-[Upgrading Pepr](upgrading-pepr.md) says more about the guard.
+Pepr's watcher stops when it watches a kind that is not installed. The usual cause is that a definition is missing: the
+chart installs them unless `crds.install` is `false`. KMO guards its watch on Argo Rollouts against this, with the
+setting `KMO_GUARD_ROLLOUT_WATCH`, which is on by default. When it is set to `false`, Argo Rollouts must be installed
+before the operator starts. [Upgrading Pepr](upgrading-pepr.md) says more about the guard.
 
 ## The receiver answers 401, 503 or 500
 
