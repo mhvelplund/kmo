@@ -17,7 +17,7 @@ KUBECONFIG = "{{config_root}}/.kube/config"
 
 [tasks.setup]
 description = "Install dependencies and Git hooks"
-run = ["npm install", "pre-commit install"]
+run = ["npm install", "pre-commit install", "pre-commit install --hook-type commit-msg"]
 
 [tasks.lint]
 description = "Run every static check"

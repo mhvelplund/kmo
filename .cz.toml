@@ -1,0 +1,25 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_scheme = "semver2"
+tag_format = "v$version"
+# git push --follow-tags pushes annotated tags only.
+annotated_tag = true
+update_changelog_on_bump = true
+# A breaking change raises the minor number while the version is 0.x.
+major_version_zero = true
+# A push by a GitHub App starts workflows again; this stops a second run for the bump commit.
+bump_message = "bump: version $current_version → $new_version [skip ci]"
+version_files = [
+    "package.json:^  \"version\"",
+    "packages/core/package.json:^  \"version\"",
+    "packages/operator/package.json:^  \"version\"",
+    "packages/receiver/package.json:^  \"version\"",
+    "packages/certgen/package.json:^  \"version\"",
+    "charts/kmo/Chart.yaml:^version",
+    "charts/kmo/Chart.yaml:^appVersion",
+    "charts/argocd-application.yaml:targetRevision",
+]
+# The lockfile holds the version of each workspace package. npm writes it, so that no dependency
+# with the same version number is changed.
+pre_bump_hooks = ["npm install --package-lock-only --ignore-scripts"]
