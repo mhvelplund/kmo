@@ -1,0 +1,17 @@
+{
+  "name": "@kmo/certgen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Makes the key and the address of the admission webhook inside the cluster",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --minify --platform=node --target=node22 --format=cjs --outfile=dist/certgen.cjs"
+  },
+  "dependencies": {
+    "node-forge": "1.4.0"
+  },
+  "devDependencies": {
+    "@types/node-forge": "1.3.14",
+    "esbuild": "0.28.2"
+  }
+}
