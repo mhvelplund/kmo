@@ -52,7 +52,10 @@ locals {
       helm           = { valuesObject = local.root_values }
     }
     destination = { server = "https://kubernetes.default.svc", namespace = "argocd" }
-    syncPolicy  = { automated = { prune = true, selfHeal = true } }
+    syncPolicy = {
+      automated = { prune = true, selfHeal = true }
+      retry     = { limit = 10, backoff = { duration = "10s", factor = 2, maxDuration = "3m" } }
+    }
   }
 }
 
@@ -71,6 +74,9 @@ resource "helm_release" "argocd" {
     configs = {
       cm = {
         "resource.customizations.health.argoproj.io_Application" = local.application_health
+      }
+      params = {
+        "controller.sync.timeout.seconds" = 300
       }
       repositories = {
         kmo-charts = {
