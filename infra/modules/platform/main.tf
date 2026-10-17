@@ -33,9 +33,12 @@ locals {
     region      = var.region
     clusterName = var.cluster_name
     vpcId       = var.vpc_id
+    bucket      = var.bucket
+    tokenSecret = var.token_secret_name
     roles = {
       lbController    = var.lb_controller_role_arn
       externalSecrets = var.external_secrets_role_arn
+      store           = var.store_role_arn
     }
   }
 

@@ -24,6 +24,21 @@ dependency "eks" {
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
+dependency "store" {
+  config_path = "../store"
+  mock_outputs = {
+    bucket         = "mock-bucket"
+    store_role_arn = "arn:aws:iam::111122223333:role/mock"
+  }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+}
+
+dependency "events" {
+  config_path                             = "../events"
+  mock_outputs                            = { token_secret_name = "kmo-demo/receiver-token" }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+}
+
 inputs = {
   cluster_name                       = dependency.eks.outputs.cluster_name
   cluster_endpoint                   = dependency.eks.outputs.cluster_endpoint
@@ -31,6 +46,9 @@ inputs = {
   vpc_id                             = dependency.network.outputs.vpc_id
   lb_controller_role_arn             = dependency.eks.outputs.lb_controller_role_arn
   external_secrets_role_arn          = dependency.eks.outputs.external_secrets_role_arn
+  bucket                             = dependency.store.outputs.bucket
+  store_role_arn                     = dependency.store.outputs.store_role_arn
+  token_secret_name                  = dependency.events.outputs.token_secret_name
   repo_url                           = get_env("KMO_REPO_URL")
   revision                           = get_env("KMO_DEMO_REVISION", "main")
 }

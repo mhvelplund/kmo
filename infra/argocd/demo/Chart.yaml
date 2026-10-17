@@ -1,0 +1,4 @@
+apiVersion: v2
+name: demo
+description: A workload in EKS whose values come from a private bucket, read with no stored key.
+version: 0.1.0

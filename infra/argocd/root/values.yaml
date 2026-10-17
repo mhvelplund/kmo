@@ -8,6 +8,10 @@ vpcId: ""
 roles:
   lbController: ""
   externalSecrets: ""
+  store: ""
+bucket: ""
+tokenSecret: ""
 versions:
   lbController: 3.5.0
   externalSecrets: 2.11.0
+  kmo: 0.2.0

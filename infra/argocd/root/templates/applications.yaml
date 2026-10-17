@@ -58,3 +58,87 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kmo-secrets
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.revision | quote }}
+    path: infra/argocd/secrets
+    helm:
+      valuesObject:
+        region: {{ .Values.region | quote }}
+        tokenSecret: {{ .Values.tokenSecret | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kmo-system
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 10s, factor: 2, maxDuration: 3m } }
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kmo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/{{ .Values.owner }}/charts
+    chart: kmo
+    targetRevision: {{ .Values.versions.kmo | quote }}
+    helm:
+      releaseName: kmo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pepr-system
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 10s, factor: 2, maxDuration: 3m } }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: pepr-kmo
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+        - .webhooks[].clientConfig.service.path
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.revision | quote }}
+    path: infra/argocd/demo
+    helm:
+      valuesObject:
+        region: {{ .Values.region | quote }}
+        bucket: {{ .Values.bucket | quote }}
+        storeRole: {{ .Values.roles.store | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aws-demo
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 10s, factor: 2, maxDuration: 3m } }

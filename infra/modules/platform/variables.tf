@@ -42,3 +42,18 @@ variable "revision" {
   description = "The pushed branch or tag that ArgoCD reads."
   type        = string
 }
+
+variable "bucket" {
+  description = "The config bucket."
+  type        = string
+}
+
+variable "store_role_arn" {
+  description = "The role of the ServiceAccount aws-demo/kmo-store."
+  type        = string
+}
+
+variable "token_secret_name" {
+  description = "The secret in Secrets Manager that holds the receiver's token."
+  type        = string
+}
