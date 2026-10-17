@@ -29,7 +29,8 @@ The AWS integration brings the Terraform and Terragrunt modules for the AWS side
 - the AWS side of a store without stored keys: the registration of a cluster's signing keys, and the IAM roles;
 - HTTPS on the receiver, which speaks plain HTTP today. The receiver must support HTTPS and prefer it. EventBridge sends
   events to HTTPS addresses only, so the path from S3 cannot work without it;
-- proper authentication of the receiver, which knows one shared token today.
+- proper authentication of the receiver, which knows one shared token today. See
+  [Authentication of the receiver with OAuth](#authentication-of-the-receiver-with-oauth).
 
 It must settle these points:
 
@@ -63,6 +64,38 @@ whose values changed.
 
 The spec must settle the form of the request, which could be the same annotation on the store, and who may make it on a
 ClusterConfigStore, where one request syncs ConfigSyncs in many namespaces.
+
+## Authentication of the receiver with OAuth
+
+The receiver knows one shared token today. That token does not expire, and a person must change it by hand. OAuth gives
+EventBridge a token that lives for about an hour, from a standard exchange.
+
+EventBridge cannot prove its own identity to an HTTP address. A connection knows three methods only: Basic, an API key,
+and OAuth client credentials. It cannot sign a request with SigV4, it cannot send a client certificate, and it cannot
+send an identity token that AWS signs. Of the three methods, OAuth client credentials is the nearest to OIDC:
+
+1. The connection holds a client ID and a client secret.
+2. EventBridge sends them to the token address of an authorization server and gets an access token, which is a JWT.
+3. EventBridge sends the JWT in the header `Authorization: Bearer <jwt>`. It gets a new token when the old one is about
+   to expire, and after an answer of 401.
+
+The proposal:
+
+- **The authorization server is Amazon Cognito.** A user pool with a domain, a resource server with one scope for the
+  events, and an app client that may use the grant of client credentials. Terraform makes all of them.
+- **API Gateway checks the JWT.** The HTTP API in front of the receiver has a JWT authorizer, with the issuer of the
+  user pool, the app client as the audience, and the scope of the events. A request with a bad or expired token stops at
+  API Gateway and does not get into the VPC. The receiver needs no change.
+- **The shared token stays.** A connection can add more headers to each call, so EventBridge sends the receiver's token
+  too. The local RustFS can send only a fixed token, so the receiver keeps one way to check a caller for all stores.
+
+The work must settle these points:
+
+- **Is it worth it?** The client secret is a secret that does not expire, in place of the token. The gain is small,
+  because the most that a caller can do is ask for a sync, and a sync that finds the same values restarts nothing.
+- **A check in the receiver.** The receiver could check the JWT itself, so that it does not depend on API Gateway. That
+  is a change to the code: a JWT library, a cache of the keys of the issuer, and an outbound path from the receiver to
+  the issuer. It also gives the receiver two ways to check a caller.
 
 ## Open points
 
