@@ -86,7 +86,8 @@ the next.
 1. `aws-load-balancer-controller` and `external-secrets`.
 2. `kmo-secrets`: the ClusterSecretStore, and the ExternalSecret that makes the Secret `kmo-receiver-token` in
    `kmo-system`.
-3. `kmo`: the published chart. The version is in `infra/argocd/root/values.yaml`.
+3. `kmo`: the published chart. The version is in `infra/argocd/root/values.yaml`, and each release sets it to the new
+   version.
 4. `demo`.
 
 The token has a wave of its own, before KMO, for this reason: ArgoCD waits for KMO to be Healthy, and the receiver

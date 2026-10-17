@@ -6,9 +6,10 @@ work on KMO itself.
 ## One version for everything
 
 The packages, the chart and the two images share one version. The file `.cz.toml` holds it, with the list of the files
-that carry it: the five `package.json` files, the lockfile, the chart's `Chart.yaml` and the example ArgoCD application.
-Only [Commitizen](https://commitizen-tools.github.io/commitizen/) changes these version numbers, and only Commitizen
-writes `CHANGELOG.md`. Do not edit them by hand.
+that carry it: the five `package.json` files, the lockfile, the chart's `Chart.yaml`, the example ArgoCD application,
+and the version of KMO that the [demo on AWS](aws-demo.md) installs. Only
+[Commitizen](https://commitizen-tools.github.io/commitizen/) changes these version numbers, and only Commitizen writes
+`CHANGELOG.md`. Do not edit them by hand.
 
 ## How a version is made
 
