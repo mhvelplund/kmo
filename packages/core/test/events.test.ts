@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MalformedEventError, normalizeEventBridgeEvent, normalizeRustfsEvent } from "../src/events";
 import eventBridgeCreated from "./fixtures/eventbridge-object-created.json";
+import eventBridgeSpaceAndPlus from "./fixtures/eventbridge-key-with-space-and-plus.json";
 import parameterStore from "./fixtures/eventbridge-parameter-store.json";
 import rustfsDelete from "./fixtures/rustfs-delete.json";
 import rustfsPut from "./fixtures/rustfs-put.json";
@@ -70,6 +71,12 @@ describe("an EventBridge event", () => {
     ["is not an object", 42],
   ])("is malformed when it %s", (_, body) => {
     expect(() => normalizeEventBridgeEvent(body)).toThrow(MalformedEventError);
+  });
+
+  it("takes a key with a space and a plus sign as it is, because EventBridge does not encode it", () => {
+    expect(normalizeEventBridgeEvent(eventBridgeSpaceAndPlus)).toEqual([
+      { bucket: "amzn-s3-demo-bucket1", key: "probe/a b+c.env" },
+    ]);
   });
 
   it("yields nothing for an event from a source other than S3, so other kinds of store can come later", () => {
