@@ -57,3 +57,8 @@ variable "token_secret_name" {
   description = "The secret in Secrets Manager that holds the receiver's token."
   type        = string
 }
+
+variable "target_group_arn" {
+  description = "The target group of the receiver."
+  type        = string
+}

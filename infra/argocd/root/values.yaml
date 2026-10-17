@@ -11,6 +11,7 @@ roles:
   store: ""
 bucket: ""
 tokenSecret: ""
+targetGroupArn: ""
 versions:
   lbController: 3.5.0
   externalSecrets: 2.11.0

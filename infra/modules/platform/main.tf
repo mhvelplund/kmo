@@ -27,14 +27,15 @@ locals {
   EOT
 
   root_values = {
-    repoURL     = var.repo_url
-    revision    = var.revision
-    owner       = local.owner
-    region      = var.region
-    clusterName = var.cluster_name
-    vpcId       = var.vpc_id
-    bucket      = var.bucket
-    tokenSecret = var.token_secret_name
+    repoURL        = var.repo_url
+    revision       = var.revision
+    owner          = local.owner
+    region         = var.region
+    clusterName    = var.cluster_name
+    vpcId          = var.vpc_id
+    bucket         = var.bucket
+    tokenSecret    = var.token_secret_name
+    targetGroupArn = var.target_group_arn
     roles = {
       lbController    = var.lb_controller_role_arn
       externalSecrets = var.external_secrets_role_arn

@@ -136,6 +136,7 @@ spec:
         region: {{ .Values.region | quote }}
         bucket: {{ .Values.bucket | quote }}
         storeRole: {{ .Values.roles.store | quote }}
+        targetGroupArn: {{ .Values.targetGroupArn | quote }}
   destination:
     server: https://kubernetes.default.svc
     namespace: aws-demo

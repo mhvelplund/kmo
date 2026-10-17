@@ -39,6 +39,14 @@ dependency "events" {
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
+dependency "ingress" {
+  config_path = "../ingress"
+  mock_outputs = {
+    target_group_arn = "arn:aws:elasticloadbalancing:eu-west-1:111122223333:targetgroup/mock/0000000000000000"
+  }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+}
+
 inputs = {
   cluster_name                       = dependency.eks.outputs.cluster_name
   cluster_endpoint                   = dependency.eks.outputs.cluster_endpoint
@@ -49,6 +57,7 @@ inputs = {
   bucket                             = dependency.store.outputs.bucket
   store_role_arn                     = dependency.store.outputs.store_role_arn
   token_secret_name                  = dependency.events.outputs.token_secret_name
+  target_group_arn                   = dependency.ingress.outputs.target_group_arn
   repo_url                           = get_env("KMO_REPO_URL")
   revision                           = get_env("KMO_DEMO_REVISION", "main")
 }

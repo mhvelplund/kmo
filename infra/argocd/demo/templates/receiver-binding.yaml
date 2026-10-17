@@ -1,0 +1,11 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kmo-receiver
+  namespace: kmo-system
+spec:
+  serviceRef:
+    name: kmo-receiver
+    port: 8080
+  targetGroupARN: {{ .Values.targetGroupArn | quote }}
+  targetType: ip
