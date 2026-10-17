@@ -44,11 +44,12 @@ resource "aws_vpc_security_group_ingress_rule" "receiver_from_nlb" {
 }
 
 resource "aws_lb" "receiver" {
-  name               = "${var.name}-receiver"
-  internal           = true
-  load_balancer_type = "network"
-  subnets            = var.subnet_ids
-  security_groups    = [aws_security_group.nlb.id]
+  name                             = "${var.name}-receiver"
+  internal                         = true
+  load_balancer_type               = "network"
+  subnets                          = var.subnet_ids
+  security_groups                  = [aws_security_group.nlb.id]
+  enable_cross_zone_load_balancing = true
 }
 
 resource "aws_lb_target_group" "receiver" {
