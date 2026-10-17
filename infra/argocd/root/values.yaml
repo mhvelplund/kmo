@@ -1,0 +1,13 @@
+# Terraform sets these: see infra/modules/platform.
+repoURL: ""
+revision: main
+owner: ""
+region: ""
+clusterName: ""
+vpcId: ""
+roles:
+  lbController: ""
+  externalSecrets: ""
+versions:
+  lbController: 3.5.0
+  externalSecrets: 2.11.0

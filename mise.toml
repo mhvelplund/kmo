@@ -138,6 +138,7 @@ run = [
 description = "Validate the Terraform modules and lint the ArgoCD charts; needs no AWS account"
 run = [
   "for module in infra/modules/*/; do terraform -chdir=$module init -backend=false -input=false >/dev/null && terraform -chdir=$module validate -no-color || exit 1; done",
+  "for chart in infra/argocd/*/; do helm lint --quiet $chart || exit 1; done",
 ]
 
 [tasks."check:rollout-guard"]

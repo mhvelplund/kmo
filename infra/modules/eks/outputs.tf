@@ -27,3 +27,13 @@ output "node_security_group_id" {
   description = "The security group of the nodes, and so of the pods."
   value       = module.eks.node_security_group_id
 }
+
+output "lb_controller_role_arn" {
+  description = "The role of the AWS Load Balancer Controller."
+  value       = module.lb_controller_role.arn
+}
+
+output "external_secrets_role_arn" {
+  description = "The role of External Secrets Operator, which may read the secrets of the demo."
+  value       = aws_iam_role.external_secrets.arn
+}
