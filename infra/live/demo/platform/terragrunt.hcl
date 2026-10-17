@@ -9,7 +9,7 @@ terraform {
 dependency "network" {
   config_path                             = "../network"
   mock_outputs                            = { vpc_id = "vpc-00000000000000000" }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 dependency "eks" {
@@ -21,7 +21,7 @@ dependency "eks" {
     lb_controller_role_arn             = "arn:aws:iam::111122223333:role/mock"
     external_secrets_role_arn          = "arn:aws:iam::111122223333:role/mock"
   }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 dependency "store" {
@@ -30,13 +30,13 @@ dependency "store" {
     bucket         = "mock-bucket"
     store_role_arn = "arn:aws:iam::111122223333:role/mock"
   }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 dependency "events" {
   config_path                             = "../events"
   mock_outputs                            = { token_secret_name = "kmo-demo/receiver-token" }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 dependency "ingress" {
@@ -44,7 +44,7 @@ dependency "ingress" {
   mock_outputs = {
     target_group_arn = "arn:aws:elasticloadbalancing:eu-west-1:111122223333:targetgroup/mock/0000000000000000"
   }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 inputs = {

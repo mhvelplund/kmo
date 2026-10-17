@@ -85,9 +85,9 @@ The receiver keeps no state of its own, so it can run as several pods. Its log i
 
 A log line never holds the token or a value from a file.
 
-The receiver keeps an idle connection open for 400 s. This is longer than the idle time of a load balancer in front of
-it, such as the NLB of the demo with 350 s. So the load balancer never sends on a connection that the receiver has
-closed.
+The receiver keeps an idle connection open for 400 s. This is longer than a client in front of it keeps one. So the
+client never sends on a connection that the receiver has closed. A load balancer that passes TCP through must keep an
+idle connection longer still. The NLB of the demo keeps it for 600 s.
 
 ## Memory
 

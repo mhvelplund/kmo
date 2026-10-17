@@ -11,7 +11,9 @@ provider "helm" {
 }
 
 locals {
-  owner = lower(regex("github\\.com[/:]([^/]+)/", var.repo_url)[0])
+  repo_parts = regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/?$", var.repo_url)
+  owner      = lower(local.repo_parts[0])
+  repo_url   = "https://github.com/${local.repo_parts[0]}/${local.repo_parts[1]}.git"
 
   application_health = <<-EOT
     hs = {}
@@ -27,7 +29,7 @@ locals {
   EOT
 
   root_values = {
-    repoURL        = var.repo_url
+    repoURL        = local.repo_url
     revision       = var.revision
     owner          = local.owner
     region         = var.region
@@ -47,7 +49,7 @@ locals {
     namespace = "argocd"
     project   = "default"
     source = {
-      repoURL        = var.repo_url
+      repoURL        = local.repo_url
       targetRevision = var.revision
       path           = "infra/argocd/root"
       helm           = { valuesObject = local.root_values }

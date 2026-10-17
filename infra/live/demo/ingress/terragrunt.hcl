@@ -12,13 +12,13 @@ dependency "network" {
     vpc_id          = "vpc-00000000000000000"
     private_subnets = ["subnet-00000000000000000", "subnet-11111111111111111"]
   }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 dependency "eks" {
   config_path                             = "../eks"
   mock_outputs                            = { node_security_group_id = "sg-00000000000000000" }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
 
 inputs = {

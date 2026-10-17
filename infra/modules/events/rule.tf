@@ -109,6 +109,11 @@ data "aws_iam_policy_document" "events_to_logs" {
       type        = "Service"
       identifiers = ["events.amazonaws.com", "delivery.logs.amazonaws.com"]
     }
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:SourceArn"
+      values   = [aws_cloudwatch_event_rule.store.arn]
+    }
   }
 }
 
@@ -120,4 +125,6 @@ resource "aws_cloudwatch_log_resource_policy" "events" {
 resource "aws_cloudwatch_event_target" "log" {
   rule = aws_cloudwatch_event_rule.store.name
   arn  = aws_cloudwatch_log_group.events.arn
+
+  depends_on = [aws_cloudwatch_log_resource_policy.events]
 }

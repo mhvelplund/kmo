@@ -78,6 +78,7 @@ check "the store is Ready" store_ready
 check "hello runs with the value in the bucket" \
   '[ "$(greeting_in_pod)" = "$(greeting_in_bucket)" ] && pods_on "$NS" hello "$(hash_on "$NS" deployment hello)"'
 
+kubectl delete namespace kmo-webhook-check --ignore-not-found --wait=true --timeout=120s >/dev/null
 kubectl create namespace kmo-webhook-check >/dev/null
 check "the webhook refuses a second ConfigSync on the same target" "webhook_refuses kmo-webhook-check"
 kubectl delete namespace kmo-webhook-check --ignore-not-found --wait=false >/dev/null

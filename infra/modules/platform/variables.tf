@@ -34,7 +34,7 @@ variable "external_secrets_role_arn" {
 }
 
 variable "repo_url" {
-  description = "The HTTPS address of this repository, which ArgoCD reads."
+  description = "The address of this repository, HTTPS or SSH."
   type        = string
 }
 

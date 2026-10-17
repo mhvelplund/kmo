@@ -75,6 +75,8 @@ resource "aws_lb_listener" "receiver" {
   port              = 80
   protocol          = "TCP"
 
+  tcp_idle_timeout_seconds = 600
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.receiver.arn
