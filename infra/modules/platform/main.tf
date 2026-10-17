@@ -40,20 +40,16 @@ locals {
   }
 
   root_application = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "Application"
-    metadata   = { name = "root", namespace = "argocd" }
-    spec = {
-      project = "default"
-      source = {
-        repoURL        = var.repo_url
-        targetRevision = var.revision
-        path           = "infra/argocd/root"
-        helm           = { valuesObject = local.root_values }
-      }
-      destination = { server = "https://kubernetes.default.svc", namespace = "argocd" }
-      syncPolicy  = { automated = { prune = true, selfHeal = true } }
+    namespace = "argocd"
+    project   = "default"
+    source = {
+      repoURL        = var.repo_url
+      targetRevision = var.revision
+      path           = "infra/argocd/root"
+      helm           = { valuesObject = local.root_values }
     }
+    destination = { server = "https://kubernetes.default.svc", namespace = "argocd" }
+    syncPolicy  = { automated = { prune = true, selfHeal = true } }
   }
 }
 
@@ -82,6 +78,17 @@ resource "helm_release" "argocd" {
         }
       }
     }
-    extraObjects = [local.root_application]
   })]
+}
+
+resource "helm_release" "root" {
+  name       = "root"
+  namespace  = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argocd-apps"
+  version    = "2.0.6"
+
+  values = [yamlencode({ applications = { root = local.root_application } })]
+
+  depends_on = [helm_release.argocd]
 }
