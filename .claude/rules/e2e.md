@@ -15,6 +15,8 @@ The suites are in Bash and run against the local cluster.
 - Each suite works in a namespace of its own and removes it at the end.
 - `aws/` holds the scripts for the proof of stores without stored keys. They create and delete AWS resources, so they
   need a go-ahead in the session each time.
+- `aws-demo.sh` checks the demo that `mise run aws:up` makes in EKS. `mise run test:aws` runs it. It is not one of the
+  local suites, it writes to the config bucket in AWS, and it needs a go-ahead in the session each time.
 - Add a check to the suite that fits for each new behavior that can be seen on the cluster.
 
 ## Timing of RustFS

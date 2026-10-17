@@ -1,0 +1,5 @@
+# The root chart sets these.
+region: ""
+bucket: ""
+storeRole: ""
+targetGroupArn: ""

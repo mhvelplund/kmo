@@ -10,10 +10,9 @@ rolls the workloads that use them when their effective values change. It is also
 idiomatic patterns are preferred and the reasons for them are documented.
 
 The operator core is finished: the operator, the receiver and the three custom resources run end to end on a local
-cluster. KMO has a Helm chart, proven on the local cluster under Helm and ArgoCD, and a release workflow. Stores without
-stored keys are proven from the local cluster against a real AWS account, and not yet inside EKS. Two more pieces of
-work are planned, the proof inside EKS and the AWS integration (Terraform/Terragrunt). Neither is designed, and each
-needs a spec before a plan.
+cluster. KMO has a Helm chart, proven on the local cluster under Helm and ArgoCD, and a release workflow. A demo on AWS
+(Terraform/Terragrunt, ArgoCD in EKS) proves the whole path from S3 through EventBridge to a rolled pod, and stores
+without stored keys inside EKS. Nothing planned is designed yet, and each piece needs a spec before a plan.
 
 The product is named **KMO**. The directory is still called `zeemo` and must not be renamed; never introduce "zeemo" in
 code, manifests or docs. Kubernetes names use `kmo`: API group `kmo.isntall.net`, label
@@ -68,6 +67,7 @@ An npm workspace of source-only TypeScript packages: nothing is compiled, and co
 - `charts/` holds the hand-written half of the Helm chart, the script that builds the chart, and an example ArgoCD
   application.
 - `crds/` holds the definitions of the three custom resources.
+- `infra/` holds the Terraform and Terragrunt of the demo on AWS, and the charts that ArgoCD installs there.
 - `dev/` holds the manifests of the local environment and the demo.
 - `test/e2e/` holds the end-to-end suites, in Bash, and the scripts for the proof on AWS.
 - `docs/` holds the documentation for people, starting at `docs/index.md`.
@@ -87,6 +87,8 @@ Read the file that fits before you plan or change that part. Do not read them al
 | Work on `packages/receiver`                      | `.claude/rules/receiver.md`                                  |
 | Work on `test/e2e/`                              | `.claude/rules/e2e.md`                                       |
 | Work on `dev/` or `crds/`                        | `.claude/rules/dev.md`                                       |
+| Work on `infra/`                                 | `.claude/rules/infra.md`                                     |
+| The demo on AWS                                  | `docs/aws-demo.md`                                           |
 | Work on `charts/` or `packages/certgen`          | `.claude/rules/chart.md`, and `docs/installing.md`           |
 | A release, a version or the workflows            | `docs/releases.md`                                           |
 | Writing a shell script                           | `.claude/rules/shell.md`                                     |
@@ -107,7 +109,8 @@ Mise pins the tools and defines the tasks. Commands assume Mise is activated; ot
   change.
 - `mise run kmo:deploy` builds KMO from the working tree and installs it into the local cluster with the chart. Run it
   before `mise run deploy`.
-- The `aws:*` tasks create and delete AWS resources, so they need a go-ahead in the session each time.
+- The `aws:*` tasks and `test:aws` create, change or delete AWS resources, so they need a go-ahead in the session each
+  time.
 
 ## How to work
 

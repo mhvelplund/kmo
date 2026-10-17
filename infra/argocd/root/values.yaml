@@ -1,0 +1,18 @@
+# Terraform sets these: see infra/modules/platform.
+repoURL: ""
+revision: main
+owner: ""
+region: ""
+clusterName: ""
+vpcId: ""
+roles:
+  lbController: ""
+  externalSecrets: ""
+  store: ""
+bucket: ""
+tokenSecret: ""
+targetGroupArn: ""
+versions:
+  lbController: 3.5.0
+  externalSecrets: 2.11.0
+  kmo: 0.2.0

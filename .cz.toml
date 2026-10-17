@@ -19,6 +19,7 @@ version_files = [
     "charts/kmo/Chart.yaml:^version",
     "charts/kmo/Chart.yaml:^appVersion",
     "charts/argocd-application.yaml:targetRevision",
+    "infra/argocd/root/values.yaml:^  kmo:",
 ]
 # The lockfile holds the version of each workspace package. npm writes it, so that no dependency
 # with the same version number is changed.

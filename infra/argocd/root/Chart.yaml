@@ -1,0 +1,4 @@
+apiVersion: v2
+name: root
+description: The Applications of the KMO demo on AWS, in sync waves.
+version: 0.1.0

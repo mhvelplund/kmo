@@ -1,3 +1,5 @@
 packages/core/test/fixtures/
 charts/kmo/templates/
 CHANGELOG.md
+infra/argocd/*/templates/
+.superpowers/

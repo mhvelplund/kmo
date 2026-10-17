@@ -6,9 +6,10 @@ work on KMO itself.
 ## One version for everything
 
 The packages, the chart and the two images share one version. The file `.cz.toml` holds it, with the list of the files
-that carry it: the five `package.json` files, the lockfile, the chart's `Chart.yaml` and the example ArgoCD application.
-Only [Commitizen](https://commitizen-tools.github.io/commitizen/) changes these version numbers, and only Commitizen
-writes `CHANGELOG.md`. Do not edit them by hand.
+that carry it: the five `package.json` files, the lockfile, the chart's `Chart.yaml`, the example ArgoCD application,
+and the version of KMO that the [demo on AWS](aws-demo.md) installs. Only
+[Commitizen](https://commitizen-tools.github.io/commitizen/) changes these version numbers, and only Commitizen writes
+`CHANGELOG.md`. Do not edit them by hand.
 
 ## How a version is made
 
@@ -44,7 +45,7 @@ All three go to `ghcr.io`, under the owner of the repository:
 - the image `kmo-certgen`, the program of the chart's Jobs, with the same tag;
 - the chart `charts/kmo`, as an OCI artifact, with the same version.
 
-The chart names both images by that tag. The packages are private while the repository is.
+The chart names both images by that tag. The packages are public, like the repository.
 
 The end-to-end suites do not run in GitHub. Run `mise run test:e2e` before you ask for a merge.
 

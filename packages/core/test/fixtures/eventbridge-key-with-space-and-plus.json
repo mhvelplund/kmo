@@ -1,0 +1,30 @@
+{
+  "version": "0",
+  "id": "17793124-05d4-b198-2fde-7ededc63b104",
+  "detail-type": "Object Created",
+  "source": "aws.s3",
+  "account": "111122223333",
+  "time": "2026-10-17T11:06:03Z",
+  "region": "ca-central-1",
+  "resources": [
+    "arn:aws:s3:::amzn-s3-demo-bucket1"
+  ],
+  "detail": {
+    "version": "0",
+    "event-version": "1.2",
+    "bucket": {
+      "name": "amzn-s3-demo-bucket1"
+    },
+    "object": {
+      "key": "probe/a b+c.env",
+      "size": 4,
+      "etag": "6243755af178dfc1dd0e0016997ad7c3",
+      "version-id": "khma6f3m2ICXeRfnxsKewy_xmwpq6jtG",
+      "sequencer": "006AD3569B652E5C50"
+    },
+    "request-id": "N4N7GDK58NMKJ12S",
+    "requester": "123456789012",
+    "source-ip-address": "1.2.3.4",
+    "reason": "PutObject"
+  }
+}

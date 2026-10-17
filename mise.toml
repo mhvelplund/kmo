@@ -11,6 +11,8 @@ usage = "6.12.1"
 helm = "4.3.0"
 yq = "4.54.1"
 uv = "0.13.0"
+terraform = "1.16.5"
+terragrunt = "1.1.6"
 
 [env]
 KUBECONFIG = "{{config_root}}/.kube/config"
@@ -28,6 +30,8 @@ run = [
   "npm run typecheck",
   "git ls-files -co --exclude-standard '*.sh' | xargs shellcheck",
   "git ls-files -co --exclude-standard '*.sh' | xargs shfmt --diff",
+  "terraform fmt -check -recursive infra",
+  "terragrunt hcl format --check --exclude-dir .terraform --exclude-dir .terragrunt-cache --working-dir infra",
 ]
 
 [tasks.format]
@@ -113,6 +117,34 @@ run = "test/e2e/aws/setup.sh"
 [tasks."aws:teardown"]
 description = "Remove everything aws:issuer and aws:setup created"
 run = "test/e2e/aws/teardown.sh"
+
+[tasks."aws:up"]
+description = "Create the demo on AWS with Terragrunt, and a kubeconfig for its cluster (creates AWS resources)"
+env = { KMO_REPO_URL = "{{ exec(command='git remote get-url origin') }}", KUBECONFIG = "{{config_root}}/.kube/eks" }
+run = [
+  "terragrunt run --all --non-interactive --backend-bootstrap --working-dir infra/live/demo -- apply",
+  "aws eks update-kubeconfig --name kmo-demo --alias kmo-demo --kubeconfig {{config_root}}/.kube/eks",
+]
+
+[tasks."aws:down"]
+description = "Delete everything that aws:up created, except the state bucket (deletes AWS resources)"
+env = { KMO_REPO_URL = "{{ exec(command='git remote get-url origin') }}", KUBECONFIG = "{{config_root}}/.kube/eks" }
+run = [
+  "terragrunt run --all --non-interactive --working-dir infra/live/demo -- destroy",
+  "rm -f {{config_root}}/.kube/eks",
+]
+
+[tasks."test:aws"]
+description = "Check the demo on AWS: a changed file in S3 rolls a workload in EKS through EventBridge (writes to S3)"
+env = { KUBECONFIG = "{{config_root}}/.kube/eks" }
+run = "test/e2e/aws-demo.sh"
+
+[tasks."infra:check"]
+description = "Validate the Terraform modules and lint the ArgoCD charts; needs no AWS account"
+run = [
+  "for module in infra/modules/*/; do terraform -chdir=$module init -backend=false -input=false >/dev/null && terraform -chdir=$module validate -no-color || exit 1; done",
+  "for chart in infra/argocd/*/; do helm lint --quiet $chart || exit 1; done",
+]
 
 [tasks."check:rollout-guard"]
 description = "Prove the guarded Rollout watch on the local cluster (removes and reinstalls Argo Rollouts)"

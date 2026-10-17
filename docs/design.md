@@ -24,20 +24,20 @@ was chosen. [Concepts](concepts.md) explains each Kubernetes idea that KMO uses.
 
 ## Scope
 
-KMO is the operator, the receiver, the three custom resources, a Helm chart, the tooling and a local environment, and it
-runs end to end on a local cluster.
+KMO is the operator, the receiver, the three custom resources, a Helm chart, the tooling, a local environment, and a
+demo on AWS with Terraform and Terragrunt. It runs end to end on a local cluster and in EKS: see
+[the demo on AWS](aws-demo.md).
 
 It does not have:
 
-- an installation that is proven in a real cluster, or Terraform and Terragrunt modules;
-- TLS, ingress, or authentication of the receiver beyond a shared bearer token;
+- Terraform for anything but the demo;
+- TLS in the receiver, or authentication of the receiver beyond a shared bearer token;
 - automatic injection of references into workloads;
 - workload kinds other than Deployment, StatefulSet, DaemonSet, CronJob and Argo Rollout;
 - staggered restarts after a change to a common file;
 - the UI that edits the files;
 - a tool that brings a developer's local dotenv files in step with the store;
-- several copies of the operator in one cluster. Tenants are kept apart by stores;
-- the AWS side of a store without stored keys: the registration of a cluster's signing keys, and the IAM roles.
+- several copies of the operator in one cluster. Tenants are kept apart by stores.
 
 [Planned work](planned.md) says which of these are planned.
 
@@ -51,7 +51,7 @@ It does not have:
 - Workloads in different namespaces can be served from different buckets with different credentials, and a namespace
   cannot read the files of another.
 - A store in AWS can be reached with no stored key: the store names a ServiceAccount, and AWS gives short-lived keys in
-  exchange for that ServiceAccount's token. This is proven from a cluster outside EKS, and not yet inside EKS.
+  exchange for that ServiceAccount's token. This is proven from a cluster outside EKS and inside EKS.
 - A newcomer can go from a fresh clone to a working demo with only the Mise tasks and these pages.
 
 The end-to-end suites in `test/e2e/` check these on the local cluster.
@@ -75,6 +75,7 @@ The end-to-end suites in `test/e2e/` check these on the local cluster.
 | The S3 fields of a store sit in their own block, with the identity          | Other kinds of store are [planned](planned.md). Each kind gets its own block with its own location and its own way to prove who is asking, so a new kind is an addition and not a change.                                                  |
 | Outputs marked for Stakater Reloader to ignore                              | Clusters that already run Reloader would otherwise roll a workload a second time for the same change. The mark does nothing where Reloader is absent, so nothing has to be detected.                                                       |
 | A store reaches AWS as a ServiceAccount, never with the operator's identity | No key is stored, and AWS itself refuses a store that names a role its namespace does not own. External Secrets Operator uses the same pattern. Stored keys stay as a second method for stores that cannot do this, such as the local one. |
+| HTTPS ends at API Gateway, not in the receiver                              | EventBridge sends events to HTTPS addresses with a public certificate only. API Gateway has one on its own address, so the demo needs no domain and the receiver stays plain HTTP inside the VPC.                                          |
 | RustFS as the local store                                                   | RustFS is Apache-2.0, needs no registration and uses the standard S3 notification API.                                                                                                                                                     |
 | A guarded Rollout watch, on by default, with a switch                       | Pepr crash-loops on a watch whose kind is missing, so the operator checks for Argo Rollouts before watching Rollouts. The check leans on Pepr internals, so a switch turns it off and falls back to the plain watch.                       |
 | k3d for the local cluster                                                   | It is k3s in Docker: disposable, rootless, version-pinned by Mise and equipped with an image registry.                                                                                                                                     |

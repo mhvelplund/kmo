@@ -5,13 +5,17 @@ import { errorName } from "./log";
 // EventBridge allows events of up to 1 MB, but a store event is a few KB, and the body is read before the token.
 const MAX_BODY_BYTES = 64 * 1024;
 
+// Longer than a client in front of the receiver keeps an idle connection, so the client never sends on a connection
+// that the receiver has closed. A load balancer that passes TCP through must keep it longer still.
+const KEEP_ALIVE_TIMEOUT_MS = 400_000;
+
 /**
  * Makes the HTTP server of the receiver.
  * @param deps The token, the lists of the cluster and the way to ask for a sync.
  * @returns A server that is not listening yet.
  */
 export function createReceiver(deps: ReceiverDeps): Server {
-  return createServer((request, response) => {
+  const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
     let size = 0;
     request.on("data", (chunk: Buffer) => {
@@ -40,4 +44,6 @@ export function createReceiver(deps: ReceiverDeps): Server {
         });
     });
   });
+  server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
+  return server;
 }

@@ -70,8 +70,8 @@ is enabled, its endpoint is `http://kmo-receiver.kmo-system.svc:8080/events/rust
 and the receiver's address is allowed as an outbound target. The seed Job then tells each bucket to send its
 object-created and object-removed events to that webhook.
 
-For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. KMO does not create the rule and the
-connection yet: see [Planned work](planned.md#aws-integration).
+For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. [The demo on AWS](aws-demo.md) makes the
+rule, the connection (the token as `Authorization: Bearer`) and the API that carries them to the receiver.
 
 ## Running it
 
@@ -84,6 +84,10 @@ The receiver keeps no state of its own, so it can run as several pods. Its log i
 - `KMO receiver lost a watch and starts it again` when the connection to the API server broke.
 
 A log line never holds the token or a value from a file.
+
+The receiver keeps an idle connection open for 400 s. This is longer than a client in front of it keeps one. So the
+client never sends on a connection that the receiver has closed. A load balancer that passes TCP through must keep an
+idle connection longer still. The NLB of the demo keeps it for 600 s.
 
 ## Memory
 

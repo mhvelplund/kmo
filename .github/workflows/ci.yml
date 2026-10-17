@@ -17,5 +17,6 @@ jobs:
       - run: npm ci
       - run: mise run lint
       - run: mise run test
+      - run: mise run infra:check
       - name: Build the chart
         run: charts/build.sh --image-registry "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
