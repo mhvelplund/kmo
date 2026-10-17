@@ -5,3 +5,6 @@ dist/
 *.log
 CLAUDE.local.md
 mise.local.toml
+.terraform/
+.terragrunt-cache/
+.terraform.lock.hcl
