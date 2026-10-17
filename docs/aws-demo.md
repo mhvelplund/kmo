@@ -4,6 +4,8 @@ The demo puts KMO in a real EKS cluster and shows the whole path of a change, fr
 costs about $0.30 an hour while it runs. `mise run aws:down` ends it. The bucket that holds the Terraform state stays
 until you delete it: see [Deleting the state bucket](#deleting-the-state-bucket).
 
+[![AWS Demo](./aws-demo.png)](./aws-demo.png)
+
 ## What it shows
 
 One changed file travels this path:
