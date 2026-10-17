@@ -134,6 +134,11 @@ run = [
   "rm -f {{config_root}}/.kube/eks",
 ]
 
+[tasks."test:aws"]
+description = "Check the demo on AWS: a changed file in S3 rolls a workload in EKS through EventBridge (writes to S3)"
+env = { KUBECONFIG = "{{config_root}}/.kube/eks" }
+run = "test/e2e/aws-demo.sh"
+
 [tasks."infra:check"]
 description = "Validate the Terraform modules and lint the ArgoCD charts; needs no AWS account"
 run = [
