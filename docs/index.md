@@ -9,6 +9,8 @@ Kubernetes replaces the pods when a value changed and leaves them alone when non
 
 KMO runs end to end on a local cluster today. It has a Helm chart, which is not yet proven in a real cluster.
 
+[![Overview](./overview.png)](./overview.png)
+
 ## Pages
 
 In reading order:
