@@ -5,10 +5,9 @@ import { errorName } from "./log";
 // EventBridge allows events of up to 1 MB, but a store event is a few KB, and the body is read before the token.
 const MAX_BODY_BYTES = 64 * 1024;
 
-// Longer than the 350 s idle timeout of an NLB.
+// Longer than a client in front of the receiver keeps an idle connection, so the client never sends on a connection
+// that the receiver has closed. A load balancer that passes TCP through must keep it longer still.
 const KEEP_ALIVE_TIMEOUT_MS = 400_000;
-// Node needs the header timeout to be longer than the keep-alive timeout.
-const HEADERS_TIMEOUT_MS = 405_000;
 
 /**
  * Makes the HTTP server of the receiver.
@@ -46,6 +45,5 @@ export function createReceiver(deps: ReceiverDeps): Server {
     });
   });
   server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
-  server.headersTimeout = HEADERS_TIMEOUT_MS;
   return server;
 }

@@ -28,7 +28,9 @@ An event that EventBridge cannot deliver goes to a dead-letter queue.
 - The variable `AWS_REGION`, set on each command. An `export` in one shell does not carry over to the next command.
 - Mise. It pins Terraform, Terragrunt, kubectl and the other tools.
 
-It needs no GitHub credential. The repository and the packages on GitHub are public.
+It needs no GitHub credential. The repository and the packages on GitHub are public. With a fork, ArgoCD looks for the
+chart at `ghcr.io/<fork owner>/charts`. That exists only if the fork publishes public packages. If it does not, set the
+owner of `kmo-charts` back to the upstream owner.
 
 ## How to run it
 
@@ -36,7 +38,9 @@ It needs no GitHub credential. The repository and the packages on GitHub are pub
   then installs the rest in the cluster.
 - `mise run test:aws` checks the demo. It writes files in the config bucket and changes nothing else in AWS, so it can
   run many times on one cluster. It is described below.
-- `mise run aws:down` deletes everything that `aws:up` made, except the state bucket.
+- `mise run aws:down` deletes everything that `aws:up` made, except the state bucket. If an `aws:up` failed, run
+  `aws:down`. It removes what `aws:up` made. Each cycle leaves the KMS key of the EKS cluster waiting 30 days for
+  deletion. Such keys cost nothing.
 
 ArgoCD reads only code that is pushed. To run the demo from a branch other than `main`, push the branch and set
 `KMO_DEMO_REVISION` to its name on the command of `aws:up`.

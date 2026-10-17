@@ -22,6 +22,8 @@ This page says what KMO does not do. [Planned work](planned.md) says what is pla
 - **A common-file change rolls many workloads at once.** Restarts are not spread out.
 - **No TLS and one shared token on the receiver.** In [the demo on AWS](aws-demo.md), HTTPS ends at API Gateway. Proper
   authentication is [planned](planned.md#authentication-of-the-receiver-with-oauth).
+- **The EKS API endpoint of the demo is public**, and IAM protects it. Of the demo's own services, only the event route
+  is public.
 - **The demo on AWS costs about $0.30 an hour** while it runs. Its state bucket stays after `aws:down`, until you delete
   it by hand.
 - **The receiver's token is in the Terraform state** of the demo, and all EventBridge calls share that one token.
