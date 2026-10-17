@@ -48,4 +48,9 @@ describe("the receiver on a socket", () => {
   it("refuses a body over 64 KiB with 413", async () => {
     expect((await post("x".repeat(64 * 1024 + 1))).status).toBe(413);
   });
+
+  it("keeps an idle connection open longer than a load balancer in front of it", () => {
+    expect(server.keepAliveTimeout).toBe(400_000);
+    expect(server.headersTimeout).toBeGreaterThan(server.keepAliveTimeout);
+  });
 });

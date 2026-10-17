@@ -85,6 +85,10 @@ The receiver keeps no state of its own, so it can run as several pods. Its log i
 
 A log line never holds the token or a value from a file.
 
+The receiver keeps an idle connection open for 400 s. This is longer than the idle time of a load balancer in front of
+it, such as the NLB of the demo with 350 s. So the load balancer never sends on a connection that the receiver has
+closed.
+
 ## Memory
 
 The receiver keeps every ConfigSync and every store of the cluster in memory. That is what lets it answer an event
