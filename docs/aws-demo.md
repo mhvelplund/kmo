@@ -23,7 +23,7 @@ An event that EventBridge cannot deliver goes to a dead-letter queue.
 ## What it needs
 
 - An AWS account, and an AWS CLI profile with the right to make the objects in the table below.
-- The variable `AWS_REGION`, set on each command. A `export` in one shell does not carry over to the next command.
+- The variable `AWS_REGION`, set on each command. An `export` in one shell does not carry over to the next command.
 - Mise. It pins Terraform, Terragrunt, kubectl and the other tools.
 
 It needs no GitHub credential. The repository and the packages on GitHub are public.
@@ -47,7 +47,7 @@ Each of the three tasks creates, changes or deletes AWS resources. [Commands](co
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `infra/live/demo/`      | One Terragrunt unit for each part: `network`, `eks`, `store`, `ingress`, `events` and `platform`. It holds inputs and order. |
 | `infra/modules/`        | The Terraform of each unit.                                                                                                  |
-| `infra/argocd/root/`    | The chart of the root Application. It makes the other four Applications.                                                     |
+| `infra/argocd/root/`    | The chart of the root Application. It makes the other five Applications.                                                     |
 | `infra/argocd/secrets/` | The ClusterSecretStore and the ExternalSecret that make the receiver's token.                                                |
 | `infra/argocd/demo/`    | The namespace `aws-demo`, the store, the ConfigSync, the workload and the `TargetGroupBinding`.                              |
 
@@ -73,9 +73,9 @@ nodes. That is the port of KMO's admission webhook. Without the rule, the API se
 ## How ArgoCD installs it
 
 Terraform installs ArgoCD with Helm, and then a second Helm release makes the root Application. The Application kind
-does not exist until the release of ArgoCD is in, so the two cannot be one release. The root Application makes four
-more, in sync waves. ArgoCD finishes one wave, and waits until all its Applications are Healthy, before it starts the
-next.
+does not exist until the release of ArgoCD is in, so the two cannot be one release. The root Application makes five
+more, in four sync waves. ArgoCD finishes one wave, and waits until all its Applications are Healthy, before it starts
+the next.
 
 1. `aws-load-balancer-controller` and `external-secrets`.
 2. `kmo-secrets`: the ClusterSecretStore, and the ExternalSecret that makes the Secret `kmo-receiver-token` in
@@ -104,8 +104,9 @@ receiver's pod, waits for the NLB to send to the new pod, and does a second chan
 At the end it writes a file whose key holds a space and a plus sign, and checks that EventBridge and the receiver both
 show the key as it was written. It checks that no event of the run went to the dead-letter queue.
 
-If you disable the rule of the events and run the test, the bucket is ahead of the pod. It stays so until the refresh of
-the ConfigSync, after 30 minutes, or until the next write.
+Only an event makes the pod follow a change at once. A write that no event carries, for example when the rule is
+disabled, reaches the pod at the next refresh of the ConfigSync (30 minutes by default) or with the next write. Until
+then the bucket is ahead of the pod.
 
 ## How to look at it
 
