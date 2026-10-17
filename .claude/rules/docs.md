@@ -19,3 +19,4 @@ paths:
 - `mise run lint` runs the Prettier check and markdownlint on every Markdown file.
 - The wiki of the repository is a copy of `docs/`, made by `.github/workflows/wiki.yml`. Do not edit the wiki. Links
   between pages are relative and end in `.md`, with no sub-folder, so that `.github/scripts/wiki.sh` can convert them.
+  Images sit in `docs/` next to the pages, and the script copies them to the wiki.
