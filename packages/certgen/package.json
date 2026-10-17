@@ -1,6 +1,6 @@
 {
   "name": "@kmo/certgen",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Makes the key and the address of the admission webhook inside the cluster",

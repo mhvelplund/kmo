@@ -1,3 +1,23 @@
+## v0.3.0 (2026-10-17)
+
+### Feat
+
+- check the demo on AWS end to end with mise run test:aws
+- carry the events of the bucket to the receiver through API Gateway
+- run KMO in EKS with a store that has no stored key
+- install ArgoCD, the load balancer controller and External Secrets on the demo cluster
+- make the network and the EKS cluster of the demo with Terragrunt
+
+### Fix
+
+- let ArgoCD read an SSH clone, let aws:down finish after a failed aws:up, and keep the NLB's idle timeout above the receiver's
+- keep idle connections to the receiver open longer than the load balancers in front of it
+- spread the receiver's NLB across zones, so a replaced pod in the other zone gets events at once
+- make the checks of test:aws prove what happened in this run
+- let a root sync that waits on old values time out and retry
+- install the root Application after ArgoCD, and limit the controller to the demo's target groups
+- name the target groups the load balancer controller may change
+
 ## v0.2.0 (2026-10-12)
 
 ### Feat

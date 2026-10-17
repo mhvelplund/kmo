@@ -15,4 +15,4 @@ targetGroupArn: ""
 versions:
   lbController: 3.5.0
   externalSecrets: 2.11.0
-  kmo: 0.2.0
+  kmo: 0.3.0
