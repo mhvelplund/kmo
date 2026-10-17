@@ -10,6 +10,7 @@ module "lb_controller_role" {
   use_name_prefix = false
 
   attach_load_balancer_controller_targetgroup_binding_only_policy = true
+  load_balancer_controller_targetgroup_arns                       = ["arn:aws:elasticloadbalancing:*:*:targetgroup/*/*"]
 
   oidc_providers = {
     main = {
