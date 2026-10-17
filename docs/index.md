@@ -7,7 +7,7 @@ It has two programs. The receiver takes the change events of the store and asks 
 files, writes one ConfigMap and one Secret for each service, and puts a hash of their values on the workload, so that
 Kubernetes replaces the pods when a value changed and leaves them alone when none did.
 
-KMO runs end to end on a local cluster today. It has a Helm chart, which is not yet proven in a real cluster.
+KMO runs end to end on a local cluster and in EKS. It has a Helm chart, proven under Helm and ArgoCD.
 
 [![Overview](./overview.png)](./overview.png)
 
@@ -28,6 +28,7 @@ In reading order:
 - [Known limits](limits.md) says what KMO does not do.
 - [Planned work](planned.md) says what is planned and not built, and what is still to prove.
 - [Installing](installing.md) says how to install KMO with Helm or ArgoCD.
+- [The demo on AWS](aws-demo.md) puts KMO in EKS and shows a change travel from S3 to a rolled pod.
 
 For people who work on KMO itself:
 

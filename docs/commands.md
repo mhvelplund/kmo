@@ -60,6 +60,10 @@ requires `import type` for types, and `noUncheckedIndexedAccess` is on.
 - `mise run aws:issuer`, `mise run aws:setup` and `mise run aws:teardown` run the proof of stores without stored keys
   against a real AWS account. They create and delete AWS resources, so run them only when you mean to.
   [Stores in AWS without stored keys](aws-identity.md) describes them.
+- `mise run aws:up` makes [the demo on AWS](aws-demo.md) with Terragrunt and writes `.kube/eks`. `mise run test:aws`
+  checks it and writes files in its bucket. `mise run aws:down` deletes it, except the state bucket. Each creates,
+  changes or deletes AWS resources, so run them only when you mean to, with `AWS_REGION` set.
+- `mise run infra:check` validates the Terraform modules and lints the ArgoCD charts. It needs no AWS account.
 - With `KMO_OIDC_ISSUER` set, in `mise.local.toml`, `cluster:up` makes the API server sign its tokens under that
   address.
 

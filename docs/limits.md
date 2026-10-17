@@ -20,8 +20,13 @@ This page says what KMO does not do. [Planned work](planned.md) says what is pla
 - **The receiver matches on bucket name and key only.** Two stores with the same bucket name at different endpoints can
   cause a sync that was not needed. It is harmless.
 - **A common-file change rolls many workloads at once.** Restarts are not spread out.
-- **No TLS and one shared token on the receiver.** HTTPS and proper authentication are
-  [planned](planned.md#aws-integration).
+- **No TLS and one shared token on the receiver.** In [the demo on AWS](aws-demo.md), HTTPS ends at API Gateway. Proper
+  authentication is [planned](planned.md#authentication-of-the-receiver-with-oauth).
+- **The demo on AWS costs about $0.30 an hour** while it runs. Its state bucket stays after `aws:down`, until you delete
+  it by hand.
+- **The receiver's token is in the Terraform state** of the demo, and all EventBridge calls share that one token.
+- **In EKS, the control plane must reach port 3000 on the nodes**, for KMO's admission webhook. The node security group
+  of EKS does not allow this by default. [The demo on AWS](aws-demo.md) shows the rule.
 - **The operator runs in `pepr-system`.** Pepr decides that, and it cannot be changed. The chart must be installed into
   that namespace.
 - **A cluster that was off for more than 90 days** comes back with a certificate of the webhook that has ended. No

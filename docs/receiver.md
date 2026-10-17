@@ -70,8 +70,8 @@ is enabled, its endpoint is `http://kmo-receiver.kmo-system.svc:8080/events/rust
 and the receiver's address is allowed as an outbound target. The seed Job then tells each bucket to send its
 object-created and object-removed events to that webhook.
 
-For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. KMO does not create the rule and the
-connection yet: see [Planned work](planned.md#aws-integration).
+For S3 in AWS, the events come through EventBridge to `/events/eventbridge`. [The demo on AWS](aws-demo.md) makes the
+rule, the connection (the token as `Authorization: Bearer`) and the API that carries them to the receiver.
 
 ## Running it
 

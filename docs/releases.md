@@ -44,7 +44,7 @@ All three go to `ghcr.io`, under the owner of the repository:
 - the image `kmo-certgen`, the program of the chart's Jobs, with the same tag;
 - the chart `charts/kmo`, as an OCI artifact, with the same version.
 
-The chart names both images by that tag. The packages are private while the repository is.
+The chart names both images by that tag. The packages are public, like the repository.
 
 The end-to-end suites do not run in GitHub. Run `mise run test:e2e` before you ask for a merge.
 

@@ -3,43 +3,11 @@
 This page says what is planned for KMO and not built, and what each piece of work must still prove. None of it is
 designed yet. Each piece needs a spec before a plan.
 
-Two pieces of work come next: the proof inside EKS, and the AWS integration. Together they close most of the gaps in the
-scope of the [design](design.md#scope). Other kinds of store and a forced reload of a store come after them.
+The proof inside EKS and the AWS integration are done: [the demo on AWS](aws-demo.md) builds them with Terraform and
+Terragrunt and checks them with `mise run test:aws`. Other kinds of store and a forced reload of a store come next.
 
-## The proof inside EKS
-
-KMO has a Helm chart and an example ArgoCD application, and both are proven on a local cluster:
-[Installing](installing.md). It is not yet installed in a real EKS cluster.
-
-The work must settle this point:
-
-- **The proof inside EKS of stores without stored keys.** The path is proven from a cluster outside EKS. This work
-  brings the first EKS cluster and must repeat `test/e2e/aws/setup.sh` there, without the step that publishes the
-  signing keys, because EKS registers them itself. See [Stores in AWS without stored keys](aws-identity.md).
-
-It must also decide where the images come from in EKS. The packages on GitHub are private, so a cluster needs pull
-Secrets in two namespaces. A registry in AWS would need none.
-
-## AWS integration
-
-The AWS integration brings the Terraform and Terragrunt modules for the AWS side of KMO:
-
-- the EventBridge rule and the connection that carry the change events of S3 to the receiver's path
-  `/events/eventbridge`;
-- the AWS side of a store without stored keys: the registration of a cluster's signing keys, and the IAM roles;
-- HTTPS on the receiver, which speaks plain HTTP today. The receiver must support HTTPS and prefer it. EventBridge sends
-  events to HTTPS addresses only, so the path from S3 cannot work without it;
-- proper authentication of the receiver, which knows one shared token today. See
-  [Authentication of the receiver with OAuth](#authentication-of-the-receiver-with-oauth).
-
-It must settle these points:
-
-- **Where HTTPS ends.** The receiver can hold the certificate itself, or an ingress or a load balancer in front of it
-  can. The work must decide which, where the certificate comes from, and whether plain HTTP stays for the local
-  environment only.
-- **EventBridge keys.** KMO takes the key of an EventBridge event as it is, on the assumption that it is not
-  URL-encoded. The AWS integration must confirm this against a live event, with a key that holds a space and a plus
-  sign, and add the captured event to `packages/core/test/fixtures/`.
+Two things are not planned: HTTPS inside the receiver, and a certificate from the cluster with a domain. HTTPS ends at
+API Gateway: see the [design](design.md#decisions-and-their-reasons).
 
 ## Other kinds of store
 
@@ -83,9 +51,10 @@ The proposal:
 
 - **The authorization server is Amazon Cognito.** A user pool with a domain, a resource server with one scope for the
   events, and an app client that may use the grant of client credentials. Terraform makes all of them.
-- **API Gateway checks the JWT.** The HTTP API in front of the receiver has a JWT authorizer, with the issuer of the
-  user pool, the app client as the audience, and the scope of the events. A request with a bad or expired token stops at
-  API Gateway and does not get into the VPC. The receiver needs no change.
+- **API Gateway checks the JWT.** The HTTP API of [the demo on AWS](aws-demo.md) in front of the receiver is where this
+  goes. It has a JWT authorizer, with the issuer of the user pool, the app client as the audience, and the scope of the
+  events. A request with a bad or expired token stops at API Gateway and does not get into the VPC. The receiver needs
+  no change.
 - **The shared token stays.** A connection can add more headers to each call, so EventBridge sends the receiver's token
   too. The local RustFS can send only a fixed token, so the receiver keeps one way to check a caller for all stores.
 

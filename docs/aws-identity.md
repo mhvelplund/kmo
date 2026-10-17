@@ -4,9 +4,9 @@ A store must prove to the bucket who is asking. The simple way is an access key 
 a user name and a password: they do not expire, and anyone who can read the Secret has them. For a bucket in AWS there
 is a better way, and KMO supports it.
 
-**Status.** The path is proven from a cluster outside EKS: the local cluster read env files from a private S3 bucket
-with a role and no stored key. It is not proven inside EKS yet. The operator's code is the same there.
-[Planned work](planned.md#packaging) records what that proof must do.
+**Status.** The path is proven from a cluster outside EKS, where the local cluster read env files from a private S3
+bucket with a role and no stored key. It is also proven inside EKS: [the demo on AWS](aws-demo.md) is the worked example
+for EKS.
 
 ## How it works
 
@@ -31,9 +31,10 @@ memory until shortly before they expire. No key is stored in the cluster.
 - **The permissions of the role.** It needs `s3:GetObject` and `s3:GetObjectVersion` on the files, and `s3:ListBucket`
   on the bucket. Without `s3:ListBucket`, S3 answers "access denied" for a file that is only missing, and KMO cannot
   tell a missing file from a forbidden one.
-- **The cluster's signing keys.** EKS registers them in IAM by itself. For any other cluster they are published at a
-  public address and registered once as an OIDC identity provider. The scripts in `test/e2e/aws/` are a worked example
-  for the local cluster.
+- **The cluster's signing keys.** EKS publishes its signing keys itself, but IAM still needs an OIDC identity provider
+  for the issuer of the cluster. The EKS module of [the demo on AWS](aws-demo.md) makes it. For any other cluster the
+  keys are published at a public address and registered once as an OIDC identity provider. The scripts in
+  `test/e2e/aws/` are a worked example for the local cluster.
 
 ## What to know
 

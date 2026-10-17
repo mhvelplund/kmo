@@ -3,8 +3,9 @@
 KMO is installed with one Helm chart, named `kmo`. The chart brings the three definitions, the operator and the
 receiver. Helm and ArgoCD can both install it.
 
-A release publishes the chart and two images to the registry of the repository on GitHub. [Releases](releases.md) says
-how a version is made. In the addresses on this page, `OWNER` is the owner of that repository.
+A release publishes the chart and two images to the registry of the repository on GitHub. The packages are public: see
+`https://github.com/OWNER/kmo/packages`. [Releases](releases.md) says how a version is made. In the addresses on this
+page, `OWNER` is the owner of that repository.
 
 To try KMO on a local cluster, follow [Getting started](getting-started.md) in place of this page.
 
@@ -13,11 +14,10 @@ To try KMO on a local cluster, follow [Getting started](getting-started.md) in p
 - **The namespace is fixed.** The chart must be installed into the namespace `pepr-system`, because Pepr puts the
   operator there and has no setting for it. The chart refuses another namespace. The receiver goes into `kmo-system`,
   which the chart creates.
-- **The packages are private** while the repository is. Then the cluster needs a pull Secret in two namespaces:
-  - in `pepr-system`, named in the value `certgen.imagePullSecrets`. It must exist before the installation, because a
-    Job of the chart runs first. So create the namespace and the Secret by hand.
-  - in `kmo-system`, named in the value `receiver.imagePullSecrets`. Create it after the installation, because the chart
-    creates that namespace.
+- **The packages are public**, so the cluster needs no pull Secret. For a copy of the images in a private registry, the
+  values `certgen.imagePullSecrets` and `receiver.imagePullSecrets` name pull Secrets. The first is in `pepr-system` and
+  must exist before the installation, because a Job of the chart runs first. The second is in `kmo-system`; create it
+  after the installation, because the chart creates that namespace.
 - **The chart holds no token.** After the installation, create a Secret named `kmo-receiver-token` in `kmo-system`, with
   your own token under the key `token`. The receiver's pod waits until the Secret is there. [The receiver](receiver.md)
   says what the token is for.
@@ -113,8 +113,7 @@ Argo Rollouts is optional. Without it, a Rollout target is reported as a workloa
 ## What is not there yet
 
 - The receiver speaks plain HTTP and knows one shared token. Do not put it on a public address.
-- The path from S3 through EventBridge to the receiver is not set up by KMO.
-- Stores without stored keys are proven from a cluster outside EKS, and not yet inside EKS.
+  [The demo on AWS](aws-demo.md) puts API Gateway in front of it.
 
 [Known limits](limits.md) has the full list, and [Planned work](planned.md) says what will change.
 
