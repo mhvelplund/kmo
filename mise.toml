@@ -17,6 +17,9 @@ terragrunt = "1.1.6"
 [env]
 KUBECONFIG = "{{config_root}}/.kube/config"
 
+[shell_alias]
+k = "kubectl"
+
 [tasks.setup]
 description = "Install dependencies and Git hooks"
 run = ["npm install", "pre-commit install", "pre-commit install --hook-type commit-msg"]
