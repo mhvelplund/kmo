@@ -1,6 +1,6 @@
 {
   "name": "@kmo/operator",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Keeps ConfigMaps and Secrets in step with env files in an object store",
   "scripts": {

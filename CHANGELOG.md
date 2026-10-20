@@ -1,3 +1,9 @@
+## v0.3.1 (2026-10-20)
+
+### Fix
+
+- bump infra provider, module and chart pins
+
 ## v0.3.0 (2026-10-17)
 
 ### Feat
