@@ -68,7 +68,7 @@ resource "helm_release" "argocd" {
   create_namespace = true
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
-  version          = "10.9.6"
+  version          = "10.10.5"
   wait             = true
 
   values = [yamlencode({
@@ -98,7 +98,7 @@ resource "helm_release" "root" {
   namespace  = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argocd-apps"
-  version    = "2.0.6"
+  version    = "2.0.7"
 
   values = [yamlencode({ applications = { root = local.root_application } })]
 
