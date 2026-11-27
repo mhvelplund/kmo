@@ -1,3 +1,9 @@
+## v0.3.2 (2026-11-27)
+
+### Fix
+
+- **deps**: update packages with open security advisories
+
 ## v0.3.1 (2026-10-20)
 
 ### Fix
